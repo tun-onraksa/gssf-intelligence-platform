@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
-  DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -72,7 +72,9 @@ function InviteDropdown() {
         <ChevronDown size={14} className="text-slate-400" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[190px]">
-        <DropdownMenuLabel className="text-[11px]">Invite as</DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-[11px]">Invite as</DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuCheckboxItem checked={false} onClick={() => router.push('/onboarding/student')}
           className="cursor-pointer gap-2">
