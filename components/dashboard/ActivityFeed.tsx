@@ -7,7 +7,6 @@ const FEED_ITEMS = [
   { color: '#10B981', text: 'Atlix team roster complete (3/3 students confirmed)',  time: '2h ago' },
   { color: '#F59E0B', text: 'Leila Ahmadi invited as Judge (Track B) — pending rubric ack', time: '3h ago' },
   { color: '#10B981', text: 'Helion team created and assigned to Track A',          time: '4h ago' },
-  { color: '#3B82F6', text: 'Mentor matching run for Track A — 6 matches accepted', time: '5h ago' },
   { color: '#10B981', text: 'Priya Nair confirmed onboarding — conflict declared for Nexus', time: '6h ago' },
   { color: '#F59E0B', text: 'James Park flagged as potential duplicate',             time: '8h ago' },
   { color: '#10B981', text: 'GSSC Worlds 2026 program published',                   time: '1d ago' },

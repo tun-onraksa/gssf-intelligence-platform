@@ -1,22 +1,19 @@
 'use client'
 
+import { useState } from 'react'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { useStore } from '@/lib/store'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useAuth } from '@/lib/supabase/auth-context'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import type { Role } from '@/lib/types'
 
-// ── Role config ──────────────────────────────────────────────────────────────
+// ── Role config ───────────────────────────────────────────────────────────────
 
 const ROLES: Role[] = ['ADMIN', 'ORGANIZER', 'MENTOR', 'JUDGE', 'STUDENT', 'UNIVERSITY_POC']
 
@@ -47,16 +44,6 @@ const roleAvatarBg: Record<Role, string> = {
   UNIVERSITY_POC: 'bg-teal-500',
 }
 
-// Name per role — maps the "active persona" to a display name
-const rolePersonaName: Record<Role, string> = {
-  ADMIN:          'Mike Lee',
-  ORGANIZER:      'Gigi Wang',
-  MENTOR:         'Rachel Kim',
-  JUDGE:          'Sarah Chen',
-  STUDENT:        'Alex Ramos',
-  UNIVERSITY_POC: 'Ji-ho Park',
-}
-
 function initials(name: string) {
   return name
     .split(' ')
@@ -66,7 +53,7 @@ function initials(name: string) {
     .slice(0, 2)
 }
 
-// ── Logo mark ────────────────────────────────────────────────────────────────
+// ── Logo mark ─────────────────────────────────────────────────────────────────
 
 function LogoMark() {
   return (
@@ -90,13 +77,22 @@ function LogoMark() {
 // ── TopBar ────────────────────────────────────────────────────────────────────
 
 export function TopBar() {
-  const { activeRole, activeProgramId, programs, setRole, setActiveProgram } = useStore()
+  const { user, roles } = useAuth()
+  const router = useRouter()
+  const supabase = createClient()
 
-  const visiblePrograms = programs.filter(
-    (p) => p.type === 'Worlds' || p.status === 'active'
-  )
+  // Demo role switcher — purely local UI state, does not affect auth or sidebar
+  const primaryRole = (roles[0] as Role | undefined) ?? 'ADMIN'
+  const [demoRole, setDemoRole] = useState<Role>(primaryRole)
+  const activeRole: Role = roles.length > 0 ? primaryRole : demoRole
 
-  const personaName = rolePersonaName[activeRole]
+  const displayName = user?.user_metadata?.full_name ?? user?.email ?? 'Admin'
+  const displayEmail = user?.email ?? ''
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   return (
     <header
@@ -109,61 +105,62 @@ export function TopBar() {
         <span className="text-[15px] font-bold text-slate-900">GSSC VIP</span>
       </div>
 
-      {/* Center — program selector */}
+      {/* Center — program label */}
       <div className="flex items-center">
-        <Select value={activeProgramId} onValueChange={(v) => v && setActiveProgram(v)}>
-          <SelectTrigger className="h-8 w-[220px] border-slate-200 text-[13px]">
-            <SelectValue placeholder="Select program" />
-          </SelectTrigger>
-          <SelectContent>
-            {visiblePrograms.map((p) => (
-              <SelectItem key={p.programId} value={p.programId} className="text-[13px]">
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[13px] font-medium text-slate-600">
+          GSSC Worlds 2026
+        </span>
       </div>
 
-      {/* Right — role switcher + avatar */}
+      {/* Right — role indicator + avatar */}
       <div className="flex items-center gap-3">
-        {/* Role switcher */}
-        <Select value={activeRole} onValueChange={(v) => v && setRole(v as Role)}>
-          <SelectTrigger className="h-8 w-[160px] border-slate-200 text-[13px]">
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${roleDotColor[activeRole]}`} />
-              <SelectValue />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {ROLES.map((role) => (
-              <SelectItem key={role} value={role} className="text-[13px]">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${roleDotColor[role]}`} />
-                  {roleLabel[role]}
-                </div>
-              </SelectItem>
+        {/* Demo role switcher (visible in dev; shows real role in prod) */}
+        {roles.length === 0 && (
+          <select
+            value={demoRole}
+            onChange={(e) => setDemoRole(e.target.value as Role)}
+            className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[13px] text-slate-700 focus:outline-none"
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>{roleLabel[r]}</option>
             ))}
-          </SelectContent>
-        </Select>
+          </select>
+        )}
+
+        {roles.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${roleDotColor[activeRole]}`} />
+            <span className="text-[13px] text-slate-600">{roleLabel[activeRole]}</span>
+          </div>
+        )}
 
         {/* Divider */}
         <div className="h-5 w-px bg-slate-200" />
 
-        {/* Avatar with tooltip */}
-        <TooltipProvider delay={300}>
-          <Tooltip>
-            <TooltipTrigger
-              className={`flex h-8 w-8 cursor-default items-center justify-center rounded-full text-[12px] font-semibold text-white ${roleAvatarBg[activeRole]}`}
+        {/* Avatar dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[12px] font-semibold text-white ${roleAvatarBg[activeRole]}`}
+          >
+            {initials(displayName)}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <div className="px-1.5 py-1.5">
+              <p className="text-[13px] font-medium text-slate-900">{displayName}</p>
+              {displayEmail && (
+                <p className="text-[11px] text-slate-500 truncate">{displayEmail}</p>
+              )}
+              <p className="text-[11px] text-slate-400 mt-0.5">{roleLabel[activeRole]}</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-[13px] text-red-600 focus:text-red-600 cursor-pointer"
+              onSelect={handleSignOut}
             >
-              {initials(personaName)}
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-[12px]">
-              <p className="font-medium">{personaName}</p>
-              <p className="text-muted-foreground">{roleLabel[activeRole]}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

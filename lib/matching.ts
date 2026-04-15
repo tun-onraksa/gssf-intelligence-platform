@@ -1,114 +1,107 @@
-import type { Team, Person, MentorMatch } from './types'
+// ── Mentor-team matching algorithm ───────────────────────────────────────────
+// Computes expertise-overlap scores between unmatched teams and available mentors.
+// Entirely pure — no side effects, no DB calls.
 
-// Geography region mapping for loose matching
-const regionMap: Record<string, string[]> = {
-  'North America': ['United States', 'Canada', 'Mexico'],
-  'South America': ['Brazil', 'Argentina', 'Colombia', 'Chile'],
-  'Southeast Asia': ['Singapore', 'Thailand', 'Vietnam', 'Indonesia', 'Malaysia', 'Philippines'],
-  'East Asia': ['China', 'Japan', 'South Korea', 'Hong Kong', 'Taiwan'],
-  'South Asia': ['India', 'Pakistan', 'Bangladesh', 'Sri Lanka', 'Nepal'],
-  'Europe': ['United Kingdom', 'Germany', 'France', 'Switzerland', 'Finland', 'Sweden', 'Netherlands', 'Austria', 'Spain', 'Italy'],
-  'Middle East': ['Israel', 'UAE', 'Saudi Arabia', 'Turkey'],
-  'Africa': ['Ghana', 'Nigeria', 'Kenya', 'South Africa', 'Egypt'],
+export interface MatchableTeam {
+  id: string
+  name: string
+  track: string | null
+  assigned_mentor_id: string | null
+  team_expertise_needs: {
+    expertise_tags: { id: string; name: string; domain: string } | null
+  }[]
+  universities: { id: string; name: string; country: string } | null
 }
 
-// University country → broad region
-function getRegionForCountry(country: string): string {
-  for (const [region, countries] of Object.entries(regionMap)) {
-    if (countries.includes(country)) return region
-  }
-  return 'Other'
+export interface MatchableMentor {
+  id: string
+  full_name: string | null
+  organization_name: string | null
+  geographic_focus: string | null
+  years_experience: string | null
+  industry_vertical: string | null
+  profile_expertise: {
+    level: string
+    expertise_tags: { id: string; name: string; domain: string } | null
+  }[]
 }
 
-// Fundraising-adjacent tag IDs
-const fundraisingTagIds = new Set(['tag_09', 'tag_15', 'tag_05'])
+export interface ExpertiseTagBasic {
+  id: string
+  name: string
+  domain: string
+}
+
+export interface MentorMatchResult {
+  teamId: string
+  mentorId: string
+  score: number
+  matchedTags: string[]
+  matchedDomains: string[]
+}
+
+const LEVEL_WEIGHT: Record<string, number> = {
+  'Deep Expert': 3,
+  'Expert':      2,
+  'Practitioner': 1,
+}
 
 export function computeMentorMatches(
-  teams: Team[],
-  mentors: Person[]
-): MentorMatch[] {
-  const results: MentorMatch[] = []
+  teams: MatchableTeam[],
+  mentors: MatchableMentor[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _expertiseTags: ExpertiseTagBasic[],  // reserved for future domain weighting
+): MentorMatchResult[] {
+  const results: MentorMatchResult[] = []
 
-  for (const team of teams) {
-    const teamNeedSet = new Set(team.needsExpertiseTagIds)
-    const pairScores: Array<{ mentorId: string; score: number; tagOverlapScore: number; geographyScore: number; stageScore: number; matchedTagIds: string[] }> = []
+  for (const team of teams.filter((t) => !t.assigned_mentor_id)) {
+    const teamTagIds = team.team_expertise_needs
+      .map((n) => n.expertise_tags?.id)
+      .filter((id): id is string => id != null)
+
+    if (teamTagIds.length === 0) continue
 
     for (const mentor of mentors) {
-      if (!mentor.roles.includes('MENTOR')) continue
+      let score = 0
+      const matchedTags: string[] = []
+      const matchedDomains = new Set<string>()
 
-      // 1. Tag overlap score
-      const mentorTagIds = mentor.expertise.map((e) => e.tagId)
-      const matched = mentorTagIds.filter((tid) => teamNeedSet.has(tid))
-      const tagOverlapScore = team.needsExpertiseTagIds.length > 0
-        ? (matched.length / team.needsExpertiseTagIds.length) * 60
-        : 0
-
-      // 2. Geography score
-      // We need the team's university country. We pass teams and we know universityId.
-      // We look up from a static map for now (we don't have universities array here).
-      // Instead, encode region lookup by university country embedded in team metadata is not available.
-      // We use a simple heuristic: match mentor.geographicFocus against the team's program region label
-      // or universityId suffix.
-      // Since we don't have the universities array, we accept it as optional param behavior.
-      // Geography score: 10 if mentor.geographicFocus region loosely matches team university country
-      // For the pure function, we'll check based on a static university→country map derived from seed
-      const uniCountryMap: Record<string, string> = {
-        uni_usc: 'United States',
-        uni_berkeley: 'United States',
-        uni_iitdelhi: 'India',
-        uni_kaist: 'South Korea',
-        uni_aalto: 'Finland',
-        uni_oxford: 'United Kingdom',
-        uni_nus: 'Singapore',
-        uni_eth: 'Switzerland',
-        uni_tau: 'Israel',
-        uni_toronto: 'Canada',
-        uni_hkust: 'Hong Kong',
-        uni_tsinghua: 'China',
-        uni_columbia: 'United States',
-        uni_utaustin: 'United States',
-      }
-      const teamCountry = uniCountryMap[team.universityId] ?? 'Other'
-      const teamRegion = getRegionForCountry(teamCountry)
-      const geographyScore = mentor.geographicFocus === teamRegion ? 10 : 0
-
-      // 3. Stage score
-      let stageScore = 5
-      if (team.stage === 'Pre-seed') {
-        const hasFundraisingFocus = mentor.expertise.some((e) => fundraisingTagIds.has(e.tagId))
-        if (hasFundraisingFocus) stageScore = 10
+      for (const exp of mentor.profile_expertise) {
+        if (!exp.expertise_tags) continue
+        if (teamTagIds.includes(exp.expertise_tags.id)) {
+          const weight = LEVEL_WEIGHT[exp.level] ?? 1
+          score += weight
+          matchedTags.push(exp.expertise_tags.name)
+          matchedDomains.add(exp.expertise_tags.domain)
+        }
       }
 
-      // 4. Total (cap at 100)
-      const total = Math.min(100, Math.round(tagOverlapScore + geographyScore + stageScore))
-
-      pairScores.push({
-        mentorId: mentor.personId,
-        score: total,
-        tagOverlapScore: Math.round(tagOverlapScore),
-        geographyScore,
-        stageScore,
-        matchedTagIds: matched,
-      })
+      if (score > 0) {
+        results.push({
+          teamId:       team.id,
+          mentorId:     mentor.id,
+          score,
+          matchedTags,
+          matchedDomains: Array.from(matchedDomains),
+        })
+      }
     }
-
-    // Sort desc, take top 3
-    pairScores.sort((a, b) => b.score - a.score)
-    const top3 = pairScores.slice(0, 3)
-
-    top3.forEach((p, i) => {
-      results.push({
-        mentorId: p.mentorId,
-        teamId: team.teamId,
-        score: p.score,
-        tagOverlapScore: p.tagOverlapScore,
-        geographyScore: p.geographyScore,
-        stageScore: p.stageScore,
-        matchedTagIds: p.matchedTagIds,
-        rank: i + 1,
-      })
-    })
   }
 
-  return results
+  // Sort descending by score, then alphabetically by teamId for stability
+  return results.sort((a, b) =>
+    b.score !== a.score ? b.score - a.score : a.teamId.localeCompare(b.teamId)
+  )
+}
+
+/** Returns the top N mentor candidates for a given team. */
+export function topMatchesForTeam(
+  teamId: string,
+  allMatches: MentorMatchResult[],
+  limit = 5,
+): MentorMatchResult[] {
+  return allMatches
+    .filter((m) => m.teamId === teamId)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
 }

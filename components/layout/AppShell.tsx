@@ -7,8 +7,8 @@ import { Sidebar } from './Sidebar'
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // Onboarding is a standalone experience — no shell
-  if (pathname?.startsWith('/onboarding')) {
+  // Standalone pages — no shell
+  if (pathname?.startsWith('/onboarding') || pathname === '/login') {
     return <>{children}</>
   }
 

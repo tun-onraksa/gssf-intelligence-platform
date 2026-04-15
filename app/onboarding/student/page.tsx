@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { User, GraduationCap, MapPin, Plane, CheckCircle, Check, Lock } from 'lucide-react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { User, GraduationCap, MapPin, Plane, CheckCircle, Check, Lock, Loader2 } from 'lucide-react'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { StepForm } from '@/components/shared/StepForm'
-import { useStore } from '@/lib/store'
-import type { Person } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
+import { submitOnboarding } from '@/lib/actions/onboarding'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -48,13 +49,13 @@ function F({ children }: { children: React.ReactNode }) {
 
 // ── Context banner ────────────────────────────────────────────────────────────
 
-function InviteBanner() {
+function InviteBanner({ teamName }: { teamName?: string }) {
   return (
     <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
       <span className="mt-0.5 text-lg">🎓</span>
       <div>
         <p className="text-sm text-blue-800">
-          You&apos;ve been invited to join <span className="font-bold">Atlix</span> as a Student
+          You&apos;ve been invited to join <span className="font-bold">{teamName ?? 'your team'}</span> as a Student
         </p>
         <p className="mt-0.5 text-[12px] text-blue-500">GSSC Worlds 2026 · Seoul, May 17–21</p>
       </div>
@@ -77,7 +78,7 @@ type F1 = {
 type Err = Partial<Record<keyof F1, string>>
 
 const INIT: F1 = {
-  firstName: '', lastName: '', email: 'alex.ramos@usc.edu',
+  firstName: '', lastName: '', email: '',
   nationality: '', country: '', bio: '',
   yearOfStudy: '', fieldOfStudy: '', linkedin: '', website: '',
   tshirt: '', dietary: '', dietaryOther: '',
@@ -117,11 +118,11 @@ function SuccessCard({ firstName, email }: { firstName: string; email: string })
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
 
-function Step1({ f, set, e }: { f: F1; set: (k: keyof F1, v: string) => void; e: Err }) {
+function Step1({ f, set, e, teamName }: { f: F1; set: (k: keyof F1, v: string) => void; e: Err; teamName?: string }) {
   const left = 300 - f.bio.length
   return (
     <div className="space-y-4">
-      <InviteBanner />
+      <InviteBanner teamName={teamName} />
       <div className="grid grid-cols-2 gap-3">
         <F><Label required>First Name</Label>
           <input className={inp} value={f.firstName} onChange={(ev) => set('firstName', ev.target.value)} placeholder="Alex" />
@@ -292,13 +293,13 @@ function Step4({ f, set, e }: { f: F1; set: (k: keyof F1, v: string) => void; e:
   )
 }
 
-function Step5({ f }: { f: F1 }) {
+function Step5({ f, teamName }: { f: F1; teamName?: string }) {
   const rows = [
     ['Name', `${f.firstName} ${f.lastName}`],
     ['Email', f.email],
     ['Nationality', f.nationality || '—'],
     ['Country', f.country || '—'],
-    ['University', 'USC · Team: Atlix'],
+    ['Team', teamName ?? '—'],
     ['Year of Study', f.yearOfStudy || '—'],
     ['Field of Study', f.fieldOfStudy || '—'],
     ['T-Shirt', f.tshirt || '—'],
@@ -330,16 +331,78 @@ const TITLES = [
   { title: 'Confirm & Submit',     subtitle: 'Review your information before submitting.' },
 ]
 
-export default function StudentOnboardingPage() {
-  const { confirmPerson } = useStore()
+type InviteContext = { email: string; role: string; programId: string; teamId?: string; track?: string }
+
+function StudentOnboardingContent() {
+  const searchParams = useSearchParams()
+  const token = searchParams.get('token')
+  const supabase = createClient()
+
+  const [teamName, setTeamName] = useState<string | undefined>(undefined)
   const [step, setStep] = useState(0)
   const [form, setFormState] = useState<F1>(INIT)
   const [errors, setErrors] = useState<Err>({})
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [inviteContext, setInviteContext] = useState<InviteContext | null>(null)
+  const [inviteError, setInviteError] = useState(false)
 
   function set(key: keyof F1, value: string) {
     setFormState((p) => ({ ...p, [key]: value }))
     setErrors((p) => ({ ...p, [key]: undefined }))
+  }
+
+  useEffect(() => {
+    if (!token) { setInviteError(true); return }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(supabase as any).rpc('get_invite_by_token', { invite_token: token })
+      .then(async ({ data, error }: { data: Record<string, unknown>[] | null; error: unknown }) => {
+        if (error || !data || data.length === 0) {
+          setInviteError(true)
+        } else {
+          const invite = data[0] as Record<string, string | null>
+          const ctx: InviteContext = {
+            email: invite.email ?? '',
+            role: invite.role ?? '',
+            programId: invite.program_id ?? '',
+            teamId: invite.team_id ?? undefined,
+            track: invite.track ?? undefined,
+          }
+          setInviteContext(ctx)
+          set('email', ctx.email)
+
+          // Fetch team name if team is assigned
+          if (ctx.teamId) {
+            const { data: team } = await supabase
+              .from('teams')
+              .select('name')
+              .eq('id', ctx.teamId)
+              .single()
+            if (team) setTeamName(team.name)
+          }
+        }
+      })
+  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (inviteError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center max-w-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Invalid or expired invite</h2>
+          <p className="text-sm text-slate-500 mt-2">
+            This invite link is no longer valid. Please contact your program organizer for a new invite.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!inviteContext) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+      </div>
+    )
   }
 
   function validate(s: number): boolean {
@@ -373,40 +436,44 @@ export default function StudentOnboardingPage() {
 
   function handleNext() { if (validate(step)) setStep((s) => s + 1) }
 
-  function handleSubmit() {
-    const person: Person = {
-      personId: `person_s_${Date.now()}`,
-      name: `${form.firstName} ${form.lastName}`,
-      email: form.email,
-      nationality: form.nationality,
-      country: form.country,
-      roles: ['STUDENT'],
-      status: 'confirmed',
-      bio: form.bio || undefined,
-      linkedIn: form.linkedin || undefined,
-      needsVisa: form.needsVisa === 'Yes',
-      passportNumber: form.passportNumber || undefined,
-      dietaryRestrictions: form.dietary === 'Other' ? form.dietaryOther : form.dietary || undefined,
-      flightDetails: form.arrivalDate ? `Arriving ${form.arrivalDate}${form.departingCity ? ` from ${form.departingCity}` : ''}` : undefined,
-      expertise: [],
-      conflictWithTeamIds: [],
-      conflictWithUniversityIds: [],
-      rubricAck: false,
-      cohortHistory: [{ programId: 'prog_worlds_2026', year: 2026, role: 'STUDENT' }],
-      programIds: ['prog_worlds_2026'],
+  async function handleSubmit() {
+    try {
+      await submitOnboarding({
+        token: token!,
+        fullName: `${form.firstName} ${form.lastName}`,
+        nationality: form.nationality,
+        countryOfResidence: form.country,
+        bio: form.bio || undefined,
+        linkedinUrl: form.linkedin || undefined,
+        needsVisa: form.needsVisa === 'Yes',
+        passportNumber: form.passportNumber || undefined,
+        passportExpiry: form.passportExpiry || undefined,
+        passportIssuingCountry: form.issuingCountry || undefined,
+        legalName: form.fullLegalName || undefined,
+        dateOfBirth: form.dateOfBirth || undefined,
+        dietaryRestrictions: form.dietary === 'Other' ? form.dietaryOther : form.dietary || undefined,
+        tshirtSize: form.tshirt || undefined,
+        emergencyContactName: form.emergencyName || undefined,
+        emergencyContactPhone: form.emergencyPhone || undefined,
+        arrivalDate: form.arrivalDate || undefined,
+        departurCity: form.departingCity || undefined,
+        flightBooked: form.flightBooked === 'Yes',
+        accessibilityNeeds: form.accessibility || undefined,
+      })
+      setSubmitted(true)
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : 'Submission failed')
     }
-    confirmPerson(person)
-    setSubmitted(true)
   }
 
   if (submitted) return <SuccessCard firstName={form.firstName} email={form.email} />
 
   const steps = [
-    <Step1 key={0} f={form} set={set} e={errors} />,
+    <Step1 key={0} f={form} set={set} e={errors} teamName={teamName} />,
     <Step2 key={1} f={form} set={set} e={errors} />,
     <Step3 key={2} f={form} set={set} e={errors} />,
     <Step4 key={3} f={form} set={set} e={errors} />,
-    <Step5 key={4} f={form} />,
+    <Step5 key={4} f={form} teamName={teamName} />,
   ]
 
   return (
@@ -423,6 +490,17 @@ export default function StudentOnboardingPage() {
       submitLabel="Complete Onboarding"
     >
       {steps[step]}
+      {submitError && (
+        <p className="mt-3 text-sm text-red-500">{submitError}</p>
+      )}
     </StepForm>
+  )
+}
+
+export default function StudentOnboardingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>}>
+      <StudentOnboardingContent />
+    </Suspense>
   )
 }

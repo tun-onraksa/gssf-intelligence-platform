@@ -1,70 +1,97 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { ReportsClient } from './ReportsClient'
 
-import Link from 'next/link'
-import { PieChart } from 'lucide-react'
+export default async function ReportsPage() {
+  const supabase = await createClient()
 
-const PREVIEW_CARDS = [
-  {
-    icon: '📊',
-    title: 'Full Program Summary',
-    description: 'Participant counts, team roster, and final results across all tracks.',
-  },
-  {
-    icon: '🏢',
-    title: 'Sponsor Impact',
-    description: 'Mentor → Team → Result chain for each sponsor organization.',
-  },
-  {
-    icon: '🎓',
-    title: 'University Report',
-    description: 'Team results filtered by university for partner-specific exports.',
-  },
-]
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', user!.id)
+    .single()
 
-export default function Page() {
+  const { data: roleRow } = await supabase
+    .from('profile_roles')
+    .select('program_id')
+    .eq('profile_id', profile!.id)
+    .not('program_id', 'is', null)
+    .limit(1)
+    .single()
+
+  const programId = roleRow?.program_id ?? ''
+
+  const [
+    { data: teams },
+    { data: universities },
+    { data: scores },
+    { data: scoringTracks },
+    { data: pitchSlots },
+    { data: participants },
+  ] = await Promise.all([
+    supabase
+      .from('teams')
+      .select(`
+        id, name, track, stage, qualifying_path, region_label, pitch_summary, university_id,
+        universities (id, name, country),
+        team_members (profiles (id, full_name))
+      `)
+      .order('name'),
+
+    supabase
+      .from('universities')
+      .select(`
+        id, name, country, active_status, cohort_history,
+        university_pocs (profiles (id, full_name, email))
+      `)
+      .order('name'),
+
+    supabase
+      .from('scores')
+      .select('id, judge_id, team_id, track, innovation, market, team_score, traction, total, submitted_at'),
+
+    supabase
+      .from('scoring_tracks')
+      .select('track, closed, closed_at'),
+
+    supabase
+      .from('pitch_slots')
+      .select('id, track, day, start_time, end_time, room, team_id')
+      .order('day')
+      .order('start_time'),
+
+    supabase
+      .from('profiles')
+      .select(`
+        id, full_name,
+        profile_roles!inner (role, program_id)
+      `)
+      .eq('profile_roles.program_id', programId),
+  ])
+
+  // Pre-compute role counts on the server
+  const allParticipants = participants ?? []
+  const roleCounts = {
+    student:   allParticipants.filter(p => p.profile_roles.some((r: { role: string }) => r.role === 'STUDENT')).length,
+    mentor:    allParticipants.filter(p => p.profile_roles.some((r: { role: string }) => r.role === 'MENTOR') && !p.profile_roles.some((r: { role: string }) => r.role === 'STUDENT')).length,
+    judge:     allParticipants.filter(p => p.profile_roles.some((r: { role: string }) => r.role === 'JUDGE')).length,
+    organizer: allParticipants.filter(p =>
+      (p.profile_roles.some((r: { role: string }) => r.role === 'ORGANIZER') || p.profile_roles.some((r: { role: string }) => r.role === 'ADMIN')) &&
+      !p.profile_roles.some((r: { role: string }) => r.role === 'STUDENT') &&
+      !p.profile_roles.some((r: { role: string }) => r.role === 'MENTOR') &&
+      !p.profile_roles.some((r: { role: string }) => r.role === 'JUDGE')
+    ).length,
+    total: allParticipants.length,
+  }
+
   return (
-    <div className="mx-auto max-w-[960px] space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-[20px] font-bold text-slate-900">Reports</h1>
-        <p className="mt-0.5 text-[13px] text-slate-400">
-          Sponsor impact, program summaries, and university exports
-        </p>
-      </div>
-
-      {/* Main placeholder card */}
-      <div className="flex justify-center">
-        <div className="w-full max-w-[480px] rounded-2xl border border-slate-200 bg-white px-12 py-12 text-center shadow-sm">
-          <div className="mb-5 flex justify-center">
-            <PieChart size={48} className="text-slate-300" />
-          </div>
-          <h2 className="mb-3 text-lg font-semibold text-slate-700">
-            Reports are coming in Phase 2
-          </h2>
-          <p className="mb-7 max-w-md text-sm leading-relaxed text-slate-400">
-            Sponsor impact reports, full program summaries, and university-scoped exports will be
-            available after GSSC Worlds 2026 concludes.
-          </p>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-4 py-2 text-[13px] font-medium text-white hover:bg-slate-700"
-          >
-            Preview Dashboard →
-          </Link>
-        </div>
-      </div>
-
-      {/* Preview cards */}
-      <div className="grid grid-cols-3 gap-4">
-        {PREVIEW_CARDS.map((card) => (
-          <div key={card.title} className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <span className="mb-3 text-2xl">{card.icon}</span>
-            <p className="mb-1.5 text-[13px] font-semibold text-slate-700">{card.title}</p>
-            <p className="flex-1 text-[12px] leading-relaxed text-slate-400">{card.description}</p>
-            <p className="mt-4 text-[11px] font-medium text-slate-400">Coming P2</p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <ReportsClient
+      teams={teams ?? []}
+      universities={universities ?? []}
+      scores={scores ?? []}
+      scoringTracks={scoringTracks ?? []}
+      pitchSlots={pitchSlots ?? []}
+      roleCounts={roleCounts}
+    />
   )
 }

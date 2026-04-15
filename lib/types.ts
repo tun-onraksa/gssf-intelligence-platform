@@ -83,7 +83,6 @@ export interface Team {
   qualifyingPath: QualifyingPath
   regionLabel?: string
   needsExpertiseTagIds: string[]
-  assignedMentorId?: string
   memberIds: string[]
   trackAssignment?: string
 }
@@ -105,6 +104,7 @@ export interface SlotConflict {
   type: 'double_booked_judge' | 'conflict_of_interest'
   judgeId: string
   description: string
+  conflictId?: string  // DB UUID — populated once reads migrate off seed data
 }
 
 export interface Score {
@@ -121,17 +121,6 @@ export interface Score {
   total: number
   submittedAt: string
   track: string
-}
-
-export interface MentorMatch {
-  mentorId: string
-  teamId: string
-  score: number
-  tagOverlapScore: number
-  geographyScore: number
-  stageScore: number
-  matchedTagIds: string[]
-  rank: number
 }
 
 export interface VisaLetter {
@@ -153,14 +142,12 @@ export interface AppStore {
   expertiseTags: ExpertiseTag[]
   pitchSlots: PitchSlot[]
   scores: Score[]
-  mentorMatches: MentorMatch[]
   visaLetters: VisaLetter[]
   schedulePublished: boolean
   scoringClosed: Record<string, boolean>
   setRole: (role: Role) => void
   setActiveProgram: (programId: string) => void
   confirmPerson: (person: Person) => void
-  acceptMentorMatch: (mentorId: string, teamId: string) => void
   submitScore: (score: Score) => void
   closeScoring: (track: string) => void
   publishSchedule: () => void

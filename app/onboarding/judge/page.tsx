@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { User, Briefcase, ShieldAlert, ClipboardList, MapPin, CheckCircle, Check, Lock } from 'lucide-react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { User, Briefcase, ShieldAlert, ClipboardList, MapPin, CheckCircle, Check, Lock, Loader2 } from 'lucide-react'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { StepForm } from '@/components/shared/StepForm'
-import { useStore } from '@/lib/store'
-import type { Person } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
+import { submitOnboarding } from '@/lib/actions/onboarding'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ type JF = {
 type Err = Partial<Record<keyof JF | 'coi' | 'rubric', string>>
 
 const INIT: JF = {
-  firstName: '', lastName: '', email: 'judge@example.com',
+  firstName: '', lastName: '', email: '',
   nationality: '', country: '', bio: '',
   organization: '', jobTitle: '', vertical: '',
   yearsExperience: '', geoFocus: '', linkedin: '', proBio: '',
@@ -141,7 +142,7 @@ function SuccessCard({
           You&apos;re confirmed, {firstName}!
         </h1>
         <p className="mt-2 text-sm text-slate-600 leading-relaxed text-center">
-          You&apos;re confirmed as a Judge for Track A at GSSC Worlds 2026. Your scoring queue
+          You&apos;re confirmed as a Judge at GSSC Worlds 2026. Your scoring queue
           will be activated before Pitch Day (May 19).
         </p>
         <div className="mt-5 space-y-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
@@ -178,14 +179,14 @@ function SuccessCard({
 
 // ── Step 1: Personal Info ─────────────────────────────────────────────────────
 
-function Step1({ f, set, e }: { f: JF; set: (k: keyof JF, v: string | boolean) => void; e: Err }) {
+function Step1({ f, set, e, track }: { f: JF; set: (k: keyof JF, v: string | boolean) => void; e: Err; track?: string }) {
   const left = 300 - f.bio.length
   return (
     <div className="space-y-4">
       <div className="mb-5 flex items-start gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3">
         <span className="mt-0.5 text-lg">⚖️</span>
         <div>
-          <p className="text-sm text-purple-900">You&apos;ve been invited as a <span className="font-bold">Judge — Track A</span></p>
+          <p className="text-sm text-purple-900">You&apos;ve been invited as a <span className="font-bold">Judge{track ? ` — Track ${track}` : ''}</span></p>
           <p className="mt-0.5 text-[12px] text-purple-500">GSSC Worlds 2026 · Seoul, May 17–21</p>
         </div>
       </div>
@@ -428,13 +429,14 @@ function Step3({
 // ── Step 4: Rubric Acknowledgment ─────────────────────────────────────────────
 
 function Step4({
-  f, set, rubricScrolled, setRubricScrolled, e,
+  f, set, rubricScrolled, setRubricScrolled, e, track,
 }: {
   f: JF
   set: (k: keyof JF, v: string | boolean) => void
   rubricScrolled: boolean
   setRubricScrolled: (v: boolean) => void
   e: Err
+  track?: string
 }) {
   const rubricRef = useRef<HTMLDivElement>(null)
 
@@ -462,7 +464,7 @@ function Step4({
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-slate-800">GSSC Worlds 2026 — Judging Rubric</h3>
-            <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Track A</span>
+            {track && <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Track {track}</span>}
           </div>
 
           <table className="w-full text-sm">
@@ -624,7 +626,7 @@ function Step5({ f, set, e }: { f: JF; set: (k: keyof JF, v: string | boolean) =
 
 // ── Step 6: Confirm ───────────────────────────────────────────────────────────
 
-function Step6({ f, teamConflicts, uniConflicts }: { f: JF; teamConflicts: TeamConflicts; uniConflicts: UniConflicts }) {
+function Step6({ f, teamConflicts, uniConflicts, track }: { f: JF; teamConflicts: TeamConflicts; uniConflicts: UniConflicts; track?: string }) {
   const conflictedTeams = ALL_TEAMS.filter((t) => teamConflicts[t.teamId])
   const conflictedUnis  = ALL_UNIVERSITIES.filter((u) => uniConflicts[u.id])
   const rows = [
@@ -632,7 +634,7 @@ function Step6({ f, teamConflicts, uniConflicts }: { f: JF; teamConflicts: TeamC
     ['Email', f.email],
     ['Organization', f.organization || '—'],
     ['Title', f.jobTitle || '—'],
-    ['Track Assignment', 'Track A'],
+    ['Track Assignment', track ? `Track ${track}` : '—'],
     ['Conflicts (Teams)', conflictedTeams.length > 0 ? conflictedTeams.map((t) => t.name).join(', ') : 'None'],
     ['Conflicts (Universities)', conflictedUnis.length > 0 ? conflictedUnis.map((u) => u.name).join(', ') : 'None'],
     ['Rubric Acknowledged', f.rubricAcked ? '✓ Yes' : '—'],
@@ -663,8 +665,13 @@ const TITLES = [
   { title: 'Confirm & Submit',               subtitle: 'Review your judge profile before submitting.' },
 ]
 
-export default function JudgeOnboardingPage() {
-  const { confirmPerson } = useStore()
+type InviteContext = { email: string; role: string; programId: string; teamId?: string; track?: string }
+
+function JudgeOnboardingContent() {
+  const searchParams = useSearchParams()
+  const token = searchParams.get('token')
+  const supabase = createClient()
+
   const [step, setStep] = useState(0)
   const [form, setFormState] = useState<JF>(INIT)
   const [teamConflicts, setTeamConflicts] = useState<TeamConflicts>({})
@@ -673,6 +680,54 @@ export default function JudgeOnboardingPage() {
   const [rubricAckedAt, setRubricAckedAt]   = useState('')
   const [errors, setErrors] = useState<Err>({})
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [inviteContext, setInviteContext] = useState<InviteContext | null>(null)
+  const [inviteError, setInviteError] = useState(false)
+
+  useEffect(() => {
+    if (!token) { setInviteError(true); return }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(supabase as any).rpc('get_invite_by_token', { invite_token: token })
+      .then(({ data, error }: { data: Record<string, unknown>[] | null; error: unknown }) => {
+        if (error || !data || data.length === 0) {
+          setInviteError(true)
+        } else {
+          const invite = data[0] as Record<string, string | null>
+          const ctx: InviteContext = {
+            email: invite.email ?? '',
+            role: invite.role ?? '',
+            programId: invite.program_id ?? '',
+            teamId: invite.team_id ?? undefined,
+            track: invite.track ?? undefined,
+          }
+          setInviteContext(ctx)
+          set('email', ctx.email)
+        }
+      })
+  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (inviteError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center max-w-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Invalid or expired invite</h2>
+          <p className="text-sm text-slate-500 mt-2">
+            This invite link is no longer valid. Please contact your program organizer for a new invite.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!inviteContext) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+      </div>
+    )
+  }
+
+  const track = inviteContext.track
 
   function set(key: keyof JF, value: string | boolean) {
     setFormState((p) => ({ ...p, [key]: value }))
@@ -723,36 +778,47 @@ export default function JudgeOnboardingPage() {
 
   function handleNext() { if (validate(step)) setStep((s) => s + 1) }
 
-  function handleSubmit() {
-    const conflictTeamIds = Object.keys(teamConflicts)
-    const conflictUniIds  = Object.keys(uniConflicts)
+  async function handleSubmit() {
     const ackedAt = rubricAckedAt || new Date().toISOString()
-
-    const person: Person = {
-      personId: `person_j_${Date.now()}`,
-      name: `${form.firstName} ${form.lastName}`,
-      email: form.email,
-      nationality: form.nationality,
-      country: form.country,
-      roles: ['JUDGE'],
-      status: 'confirmed',
-      bio: form.bio || undefined,
-      linkedIn: form.linkedin || undefined,
-      organization: form.organization,
-      needsVisa: form.needsVisa === 'Yes',
-      passportNumber: form.passportNumber || undefined,
-      dietaryRestrictions: form.dietary === 'Other' ? form.dietaryOther : form.dietary || undefined,
-      expertise: [],
-      conflictWithTeamIds: conflictTeamIds,
-      conflictWithUniversityIds: conflictUniIds,
-      rubricAck: true,
-      rubricAckAt: ackedAt,
-      cohortHistory: [{ programId: 'prog_worlds_2026', year: 2026, role: 'JUDGE' }],
-      programIds: ['prog_worlds_2026'],
-    }
-    confirmPerson(person)
     setRubricAckedAt(ackedAt)
-    setSubmitted(true)
+    try {
+      await submitOnboarding({
+        token: token!,
+        fullName: `${form.firstName} ${form.lastName}`,
+        nationality: form.nationality,
+        countryOfResidence: form.country,
+        bio: form.bio || undefined,
+        linkedinUrl: form.linkedin || undefined,
+        organizationName: form.organization || undefined,
+        jobTitle: form.jobTitle || undefined,
+        needsVisa: form.needsVisa === 'Yes',
+        passportNumber: form.passportNumber || undefined,
+        passportExpiry: form.passportExpiry || undefined,
+        passportIssuingCountry: form.issuingCountry || undefined,
+        legalName: form.fullLegalName || undefined,
+        dateOfBirth: form.dateOfBirth || undefined,
+        dietaryRestrictions: form.dietary === 'Other' ? form.dietaryOther : form.dietary || undefined,
+        tshirtSize: form.tshirt || undefined,
+        emergencyContactName: form.emergencyName || undefined,
+        emergencyContactPhone: form.emergencyPhone || undefined,
+        arrivalDate: form.arrivalDate || undefined,
+        departurCity: form.departingCity || undefined,
+        flightBooked: form.flightBooked === 'Yes',
+        accessibilityNeeds: form.accessibility || undefined,
+        industryVertical: form.vertical || undefined,
+        geographicFocus: form.geoFocus || undefined,
+        yearsExperience: form.yearsExperience || undefined,
+        conflictTeamIds: Object.keys(teamConflicts),
+        conflictUniversityIds: Object.keys(uniConflicts),
+        conflictReasons: {
+          ...Object.fromEntries(Object.entries(teamConflicts).map(([k, v]) => [k, v.reason])),
+          ...Object.fromEntries(Object.entries(uniConflicts).map(([k, v]) => [k, v.reason])),
+        },
+      })
+      setSubmitted(true)
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : 'Submission failed')
+    }
   }
 
   if (submitted) {
@@ -768,12 +834,12 @@ export default function JudgeOnboardingPage() {
   }
 
   const steps = [
-    <Step1 key={0} f={form} set={set} e={errors} />,
+    <Step1 key={0} f={form} set={set} e={errors} track={track} />,
     <Step2 key={1} f={form} set={set} e={errors} />,
     <Step3 key={2} f={form} set={set} teamConflicts={teamConflicts} setTeamConflicts={setTeamConflicts} uniConflicts={uniConflicts} setUniConflicts={setUniConflicts} e={errors} />,
-    <Step4 key={3} f={form} set={set} rubricScrolled={rubricScrolled} setRubricScrolled={setRubricScrolled} e={errors} />,
+    <Step4 key={3} f={form} set={set} rubricScrolled={rubricScrolled} setRubricScrolled={setRubricScrolled} e={errors} track={track} />,
     <Step5 key={4} f={form} set={set} e={errors} />,
-    <Step6 key={5} f={form} teamConflicts={teamConflicts} uniConflicts={uniConflicts} />,
+    <Step6 key={5} f={form} teamConflicts={teamConflicts} uniConflicts={uniConflicts} track={track} />,
   ]
 
   return (
@@ -790,6 +856,17 @@ export default function JudgeOnboardingPage() {
       submitLabel="Complete Onboarding"
     >
       {steps[step]}
+      {submitError && (
+        <p className="mt-3 text-sm text-red-500">{submitError}</p>
+      )}
     </StepForm>
+  )
+}
+
+export default function JudgeOnboardingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>}>
+      <JudgeOnboardingContent />
+    </Suspense>
   )
 }

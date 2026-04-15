@@ -6,16 +6,16 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  Sparkles,
   CalendarDays,
   BarChart3,
   Building2,
   FileText,
   PieChart,
   CircleUser,
+  Upload,
 } from 'lucide-react'
 import type { Role } from '@/lib/types'
-import { useStore } from '@/lib/store'
+import { useAuth } from '@/lib/supabase/auth-context'
 
 interface NavItem {
   path: string
@@ -28,7 +28,6 @@ const PROGRAM_ITEMS: NavItem[] = [
   { path: '/dashboard',    label: 'Dashboard',       icon: LayoutDashboard, roles: ['ADMIN', 'ORGANIZER', 'UNIVERSITY_POC'] },
   { path: '/teams',        label: 'Teams',           icon: Users,           roles: ['ADMIN', 'ORGANIZER', 'UNIVERSITY_POC'] },
   { path: '/participants', label: 'Participants',    icon: UserCheck,       roles: ['ADMIN', 'ORGANIZER'] },
-  { path: '/matching',     label: 'Mentor Matching', icon: Sparkles,        roles: ['ADMIN'] },
   { path: '/schedule',     label: 'Pitch Schedule',  icon: CalendarDays,    roles: ['ADMIN', 'ORGANIZER'] },
   { path: '/scoring',      label: 'Scoring',         icon: BarChart3,       roles: ['ADMIN', 'JUDGE'] },
 ]
@@ -36,6 +35,7 @@ const PROGRAM_ITEMS: NavItem[] = [
 const ADMIN_ITEMS: NavItem[] = [
   { path: '/universities', label: 'Universities', icon: Building2, roles: ['ADMIN', 'ORGANIZER', 'UNIVERSITY_POC'] },
   { path: '/visa',         label: 'Visa Letters', icon: FileText,  roles: ['ADMIN', 'ORGANIZER'] },
+  { path: '/import',       label: 'Import Data',  icon: Upload,    roles: ['ADMIN'] },
   { path: '/reports',      label: 'Reports',      icon: PieChart,  roles: ['ADMIN'] },
 ]
 
@@ -46,12 +46,12 @@ const ACCOUNT_ITEMS: NavItem[] = [
 interface SectionProps {
   label: string
   items: NavItem[]
-  role: Role
+  roles: string[]
   pathname: string
 }
 
-function NavSection({ label, items, role, pathname }: SectionProps) {
-  const visible = items.filter((item) => item.roles.includes(role))
+function NavSection({ label, items, roles, pathname }: SectionProps) {
+  const visible = items.filter((item) => item.roles.some((r) => roles.includes(r)))
   if (visible.length === 0) return null
 
   return (
@@ -82,9 +82,8 @@ function NavSection({ label, items, role, pathname }: SectionProps) {
 }
 
 export function Sidebar() {
-  const { activeRole, activeProgramId, programs } = useStore()
+  const { roles } = useAuth()
   const pathname = usePathname()
-  const program = programs.find((p) => p.programId === activeProgramId)
 
   return (
     <aside
@@ -94,21 +93,21 @@ export function Sidebar() {
       {/* Program header */}
       <div className="px-4 pb-3 pt-4">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Program</p>
-        <p className="mt-0.5 text-[13px] font-medium text-white">{program?.name ?? '—'}</p>
+        <p className="mt-0.5 text-[13px] font-medium text-white">GSSC Worlds 2026</p>
       </div>
 
       {/* Nav */}
       <div className="flex-1 overflow-y-auto">
-        <NavSection label="Program"  items={PROGRAM_ITEMS} role={activeRole} pathname={pathname} />
-        <NavSection label="Admin"    items={ADMIN_ITEMS}   role={activeRole} pathname={pathname} />
-        <NavSection label="Account"  items={ACCOUNT_ITEMS} role={activeRole} pathname={pathname} />
+        <NavSection label="Program"  items={PROGRAM_ITEMS} roles={roles} pathname={pathname} />
+        <NavSection label="Admin"    items={ADMIN_ITEMS}   roles={roles} pathname={pathname} />
+        <NavSection label="Account"  items={ACCOUNT_ITEMS} roles={roles} pathname={pathname} />
       </div>
 
       {/* Footer */}
       <div className="border-t border-slate-700 px-4 py-3">
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-          <span className="text-[11px] text-slate-400">{program?.name ?? 'No program'}</span>
+          <span className="text-[11px] text-slate-400">GSSC Worlds 2026</span>
           <span className="text-[11px] text-slate-500">· Active</span>
         </div>
         <p className="mt-0.5 text-[10px] text-slate-600">v1.0 prototype</p>
