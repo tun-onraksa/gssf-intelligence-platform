@@ -84,52 +84,6 @@ function avatarClass(roles: string[]) {
   return AVATAR_BG[roles[0]] ?? 'bg-slate-400'
 }
 
-const FLAG_MAP: Record<string, string> = {
-  // Country names
-  'united states': '🇺🇸', 'usa': '🇺🇸', 'us': '🇺🇸', 'u.s.a': '🇺🇸', 'u.s.': '🇺🇸',
-  'india': '🇮🇳', 'south korea': '🇰🇷', 'korea': '🇰🇷', 'republic of korea': '🇰🇷',
-  'finland': '🇫🇮', 'united kingdom': '🇬🇧', 'uk': '🇬🇧', 'england': '🇬🇧', 'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-  'singapore': '🇸🇬', 'switzerland': '🇨🇭', 'israel': '🇮🇱',
-  'canada': '🇨🇦', 'hong kong': '🇭🇰', 'china': '🇨🇳',
-  'japan': '🇯🇵', 'taiwan': '🇹🇼', 'germany': '🇩🇪', 'france': '🇫🇷',
-  'uae': '🇦🇪', 'united arab emirates': '🇦🇪',
-  'australia': '🇦🇺', 'new zealand': '🇳🇿',
-  'brazil': '🇧🇷', 'mexico': '🇲🇽', 'colombia': '🇨🇴', 'chile': '🇨🇱',
-  'argentina': '🇦🇷', 'peru': '🇵🇪',
-  'nigeria': '🇳🇬', 'ghana': '🇬🇭', 'kenya': '🇰🇪',
-  'south africa': '🇿🇦', 'egypt': '🇪🇬',
-  'indonesia': '🇮🇩', 'malaysia': '🇲🇾', 'thailand': '🇹🇭',
-  'philippines': '🇵🇭', 'vietnam': '🇻🇳', 'pakistan': '🇵🇰',
-  'bangladesh': '🇧🇩', 'sri lanka': '🇱🇰', 'nepal': '🇳🇵',
-  'saudi arabia': '🇸🇦', 'turkey': '🇹🇷', 'iran': '🇮🇷',
-  'jordan': '🇯🇴', 'lebanon': '🇱🇧',
-  'spain': '🇪🇸', 'italy': '🇮🇹', 'netherlands': '🇳🇱',
-  'sweden': '🇸🇪', 'norway': '🇳🇴', 'denmark': '🇩🇰',
-  'poland': '🇵🇱', 'austria': '🇦🇹', 'belgium': '🇧🇪',
-  'portugal': '🇵🇹', 'czech republic': '🇨🇿', 'russia': '🇷🇺',
-  'ukraine': '🇺🇦', 'greece': '🇬🇷', 'hungary': '🇭🇺', 'romania': '🇷🇴',
-  // Nationality adjectives
-  'american': '🇺🇸', 'indian': '🇮🇳', 'korean': '🇰🇷', 'south korean': '🇰🇷',
-  'finnish': '🇫🇮', 'british': '🇬🇧', 'english': '🇬🇧',
-  'singaporean': '🇸🇬', 'swiss': '🇨🇭', 'israeli': '🇮🇱',
-  'canadian': '🇨🇦', 'chinese': '🇨🇳', 'hongkonger': '🇭🇰', 'hong konger': '🇭🇰',
-  'japanese': '🇯🇵', 'taiwanese': '🇹🇼', 'german': '🇩🇪', 'french': '🇫🇷',
-  'emirati': '🇦🇪', 'australian': '🇦🇺', 'new zealander': '🇳🇿',
-  'brazilian': '🇧🇷', 'mexican': '🇲🇽', 'colombian': '🇨🇴', 'chilean': '🇨🇱',
-  'argentinian': '🇦🇷', 'argentine': '🇦🇷', 'peruvian': '🇵🇪',
-  'nigerian': '🇳🇬', 'ghanaian': '🇬🇭', 'kenyan': '🇰🇪',
-  'south african': '🇿🇦', 'egyptian': '🇪🇬',
-  'indonesian': '🇮🇩', 'malaysian': '🇲🇾', 'thai': '🇹🇭',
-  'filipino': '🇵🇭', 'philippine': '🇵🇭', 'vietnamese': '🇻🇳', 'pakistani': '🇵🇰',
-  'bangladeshi': '🇧🇩', 'sri lankan': '🇱🇰', 'nepali': '🇳🇵',
-  'saudi': '🇸🇦', 'saudi arabian': '🇸🇦', 'turkish': '🇹🇷', 'iranian': '🇮🇷',
-  'jordanian': '🇯🇴', 'lebanese': '🇱🇧',
-  'spanish': '🇪🇸', 'italian': '🇮🇹', 'dutch': '🇳🇱',
-  'swedish': '🇸🇪', 'norwegian': '🇳🇴', 'danish': '🇩🇰',
-  'polish': '🇵🇱', 'austrian': '🇦🇹', 'belgian': '🇧🇪',
-  'portuguese': '🇵🇹', 'czech': '🇨🇿', 'russian': '🇷🇺',
-  'ukrainian': '🇺🇦', 'greek': '🇬🇷', 'hungarian': '🇭🇺', 'romanian': '🇷🇴',
-}
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function ParticipantsClient({ participants, universities, masterAttendees }: ParticipantsClientProps) {
