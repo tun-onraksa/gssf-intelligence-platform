@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   ])
 
   const { data: uniTeamCounts } = await supabase.from('universities').select('team_count')
-  const totalTeams = (uniTeamCounts ?? []).reduce((sum, u) => sum + (u.team_count ?? 0), 0)
+  const totalTeams = ((uniTeamCounts ?? []) as unknown as { team_count: number | null }[]).reduce((sum, u) => sum + (u.team_count ?? 0), 0)
 
   const { data: duplicates } = await supabase
     .from('profiles')

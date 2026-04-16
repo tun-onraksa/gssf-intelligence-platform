@@ -65,7 +65,8 @@ export default async function ParticipantsPage() {
 
   return (
     <ParticipantsClient
-      participants={participants ?? []}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      participants={(participants ?? []) as any}
       universities={universities ?? []}
       masterAttendees={masterAttendees ?? []}
     />

@@ -20,9 +20,9 @@ export default async function UniversitiesPage() {
       .from('universities')
       .select('id, name, country, active_status, cohort_history')
       .order('name')
-    universities = (fallback ?? []) as Record<string, unknown>[]
+    universities = (fallback ?? []) as unknown as Record<string, unknown>[]
   } else {
-    universities = (data ?? []) as Record<string, unknown>[]
+    universities = (data ?? []) as unknown as Record<string, unknown>[]
   }
 
   // Fetch team names from master_attendees, keyed by organization name
