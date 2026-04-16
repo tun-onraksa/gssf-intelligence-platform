@@ -247,7 +247,8 @@ You have access to: participants, universities, sponsors, passes, and high-level
           // Run all tool calls in parallel
           const toolResults = await Promise.all(
             choice.message.tool_calls.map(async (tc) => {
-              const result = await runTool(tc.function.name, JSON.parse(tc.function.arguments))
+              const fn = (tc as { id: string; function: { name: string; arguments: string } }).function
+              const result = await runTool(fn.name, JSON.parse(fn.arguments))
               return {
                 role: 'tool' as const,
                 tool_call_id: tc.id,
