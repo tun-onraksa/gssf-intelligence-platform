@@ -154,7 +154,7 @@ export function PersonProfilePanel({ participant, masterAttendee, onClose }: Pro
   // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { editing ? cancelEdit() : onClose() }
+      if (e.key === 'Escape') { if (editing) { cancelEdit() } else { onClose() } }
     }
     if (participant) document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -218,7 +218,7 @@ export function PersonProfilePanel({ participant, masterAttendee, onClose }: Pro
                       className="text-[18px] font-bold text-slate-900 border-b border-blue-400 focus:outline-none bg-transparent w-full max-w-xs" />
                   : <h2 className="text-[20px] font-bold text-slate-900">{displayName}</h2>
                 }
-                {!editing && m?.nickname && <span className="text-[14px] text-slate-400">"{m.nickname}"</span>}
+                {!editing && m?.nickname && <span className="text-[14px] text-slate-400">&ldquo;{m.nickname}&rdquo;</span>}
                 {!editing && participant.is_duplicate && (
                   <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700">DUPLICATE</span>
                 )}

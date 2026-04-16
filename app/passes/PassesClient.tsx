@@ -107,7 +107,7 @@ function PassModal({ pass, onClose }: { pass: Pass; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') { editing ? cancelEdit() : onClose() } }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (editing) { cancelEdit() } else { onClose() } } }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose, editing])

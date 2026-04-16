@@ -9,7 +9,6 @@ import {
   BarChart3,
   Building2,
   FileText,
-  PieChart,
   CircleUser,
   Upload,
   Handshake,

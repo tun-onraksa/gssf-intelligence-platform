@@ -130,10 +130,6 @@ const FLAG_MAP: Record<string, string> = {
   'portuguese': '🇵🇹', 'czech': '🇨🇿', 'russian': '🇷🇺',
   'ukrainian': '🇺🇦', 'greek': '🇬🇷', 'hungarian': '🇭🇺', 'romanian': '🇷🇴',
 }
-function flag(country: string) {
-  return FLAG_MAP[country.trim().toLowerCase()] ?? '🌍'
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function ParticipantsClient({ participants, universities, masterAttendees }: ParticipantsClientProps) {
@@ -143,12 +139,6 @@ export function ParticipantsClient({ participants, universities, masterAttendees
   const [universityFilter, setUniversity]   = useState('all')
   const [page, setPage]                   = useState(0)
   const [selected, setSelected]           = useState<Participant | null>(null)
-
-  // Derived filter options
-  const nationalities = useMemo(
-    () => Array.from(new Set(participants.map((p) => p.nationality).filter((x): x is string => x != null))).sort(),
-    [participants]
-  )
 
   const filtered = useMemo(() => {
     const tabRole = TABS.find((t) => t.id === activeTab)?.role ?? null
