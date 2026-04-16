@@ -2,8 +2,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import OpenAI from 'openai'
 import { NextRequest } from 'next/server'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
 const tools: OpenAI.Chat.ChatCompletionTool[] = [
@@ -215,6 +213,7 @@ async function runTool(name: string, args: Record<string, unknown>) {
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const { messages } = await req.json()
 
   const systemPrompt = `You are a helpful assistant for the GSSF Worlds 2026 program management platform.
