@@ -25,11 +25,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
+  async function loadProfile() {
+    try {
+      const res = await fetch('/api/auth/profile')
+      const data = await res.json()
+      if (data) {
+        setProfileId(data.profileId)
+        setRoles(data.roles)
+      } else {
+        setProfileId(null)
+        setRoles([])
+      }
+    } catch (err) {
+      console.error('[AuthContext] loadProfile failed:', err)
+      setProfileId(null)
+      setRoles([])
+    }
+  }
+
   useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
     // Get initial session
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user)
-      if (user) await loadProfile(user.id)
+      if (user) await loadProfile()
       setLoading(false)
     })
 
@@ -38,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         setUser(session?.user ?? null)
         if (session?.user) {
-          await loadProfile(session.user.id)
+          await loadProfile()
         } else {
           setProfileId(null)
           setRoles([])
@@ -48,25 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function loadProfile(userId: string) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single()
-
-    if (profile) {
-      setProfileId(profile.id)
-
-      const { data: roleRows } = await supabase
-        .from('profile_roles')
-        .select('role')
-        .eq('profile_id', profile.id)
-
-      setRoles(roleRows?.map(r => r.role) ?? [])
-    }
-  }
 
   return (
     <AuthContext.Provider value={{ user, profileId, roles, loading }}>

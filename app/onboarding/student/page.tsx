@@ -57,7 +57,7 @@ function InviteBanner({ teamName }: { teamName?: string }) {
         <p className="text-sm text-blue-800">
           You&apos;ve been invited to join <span className="font-bold">{teamName ?? 'your team'}</span> as a Student
         </p>
-        <p className="mt-0.5 text-[12px] text-blue-500">GSSC Worlds 2026 · Seoul, May 17–21</p>
+        <p className="mt-0.5 text-[12px] text-blue-500">GSSF Worlds 2026 · Seoul, May 17–21</p>
       </div>
     </div>
   )
@@ -99,7 +99,7 @@ function SuccessCard({ firstName, email }: { firstName: string; email: string })
         </div>
         <h1 className="text-2xl font-bold text-slate-900">You&apos;re all set, {firstName}!</h1>
         <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-          Your profile has been submitted for GSSC Worlds 2026. You&apos;ll receive a confirmation
+          Your profile has been submitted for GSSF Worlds 2026. You&apos;ll receive a confirmation
           email at <span className="font-medium text-slate-800">{email}</span> shortly.
         </p>
         <div className="mt-5 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-left">

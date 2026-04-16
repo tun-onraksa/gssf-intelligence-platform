@@ -246,7 +246,7 @@ function PrintModal({ open, onClose, title, children }: { open: boolean; onClose
           <div className="print-hide flex items-center justify-between border-b border-slate-200 px-6 py-4">
             <div>
               <p className="text-[15px] font-semibold text-slate-800">{title}</p>
-              <p className="text-[12px] text-slate-400">GSSC Worlds 2026 · Confidential</p>
+              <p className="text-[12px] text-slate-400">GSSF Worlds 2026 · Confidential</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -263,7 +263,7 @@ function PrintModal({ open, onClose, title, children }: { open: boolean; onClose
           <div className="hidden p-6 pb-2 print:flex items-center gap-3 border-b border-slate-200">
             <div className="h-8 w-8 rounded bg-slate-800 flex-shrink-0" />
             <div>
-              <p className="text-[14px] font-bold text-slate-900">GSSC Worlds 2026</p>
+              <p className="text-[14px] font-bold text-slate-900">GSSF Worlds 2026</p>
               <p className="text-[11px] text-slate-500">Global Student Startup Challenge Foundation · Confidential</p>
             </div>
           </div>
@@ -336,7 +336,7 @@ function FullProgramContent({
       {/* Section 1 — Program Overview */}
       <div className="rounded-xl border border-slate-200 bg-white" style={{ borderLeft: '4px solid #0F172A' }}>
         <div className="px-6 py-5">
-          <p className="text-[18px] font-bold text-slate-900">GSSC Worlds 2026</p>
+          <p className="text-[18px] font-bold text-slate-900">GSSF Worlds 2026</p>
           <p className="text-[13px] text-slate-600">Global Student Startup Challenge — Worlds Edition</p>
           <p className="mt-0.5 text-[12px] text-slate-400">Seoul, Republic of Korea · May 17–21, 2026</p>
           <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-500">
@@ -689,7 +689,7 @@ function UniversityReportTab({
 
       {UniversityContent()}
 
-      <PrintModal open={showPrint} onClose={() => setShowPrint(false)} title={`${uni?.name ?? 'University'} — GSSC Worlds 2026 Report`}>
+      <PrintModal open={showPrint} onClose={() => setShowPrint(false)} title={`${uni?.name ?? 'University'} — GSSF Worlds 2026 Report`}>
         {UniversityContent()}
       </PrintModal>
     </div>
@@ -709,7 +709,7 @@ export function ReportsClient({ teams, universities, scores, scoringTracks, pitc
         <div>
           <h1 className="text-[20px] font-bold text-slate-900">Reports</h1>
           <p className="mt-0.5 text-[13px] text-slate-400">
-            Program summaries, sponsor impact, and university exports · GSSC Worlds 2026
+            Program summaries, sponsor impact, and university exports · GSSF Worlds 2026
           </p>
         </div>
         <button
@@ -753,7 +753,7 @@ export function ReportsClient({ teams, universities, scores, scoringTracks, pitc
       <PrintModal
         open={showSummaryPrint}
         onClose={() => setShowSummaryPrint(false)}
-        title="Full Program Summary — GSSC Worlds 2026"
+        title="Full Program Summary — GSSF Worlds 2026"
       >
         <FullProgramContent
           teams={teams}

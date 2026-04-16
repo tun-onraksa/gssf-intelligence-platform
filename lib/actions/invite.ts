@@ -48,7 +48,7 @@ export async function createInvite(formData: {
   if (!program) {
     const { data: created, error: createError } = await adminClient
       .from('programs')
-      .insert({ name: 'GSSC Worlds 2026', type: 'Worlds', status: 'active', year: 2026 })
+      .insert({ name: 'GSSF Worlds 2026', type: 'Worlds', status: 'active', year: 2026 })
       .select('id')
       .single()
 
@@ -102,26 +102,15 @@ export async function createInvite(formData: {
     throw new Error('Failed to create invite: ' + inviteError?.message)
   }
 
-  // Send invite email via admin client — required for admin-initiated invites.
-  // The regular (anon) client cannot send magic links to arbitrary emails.
-  if (!invite.token) {
-    await adminClient.from('invites').delete().eq('id', invite.id)
-    throw new Error('Invite token was not generated — check the invites table trigger')
-  }
+  // Invite record is now the source of truth.
+  // The invitee signs in via Google OAuth at /login — the auth callback will
+  // detect the pending invite by email and apply their role automatically.
+  // No magic link is sent; Google sign-in is the only auth method.
 
-  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/onboarding%3Ftoken%3D${invite.token}`
-  const { error: authError } = await adminClient.auth.admin.inviteUserByEmail(formData.email, {
-    redirectTo,
-  })
-
-  if (authError) {
-    // Rollback the invite if email sending failed
-    await adminClient.from('invites').delete().eq('id', invite.id)
-    throw new Error('Failed to send invite email: ' + authError.message)
-  }
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/login`
 
   revalidatePath('/participants')
-  return { success: true, inviteId: invite.id }
+  return { success: true, inviteId: invite.id, loginUrl }
 }
 
 export async function resendInvite(inviteId: string) {

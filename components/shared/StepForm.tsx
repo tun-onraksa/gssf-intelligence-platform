@@ -53,7 +53,7 @@ export function StepForm({
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600">
               <span className="text-[10px] font-bold text-white">G</span>
             </div>
-            <span className="text-sm font-semibold text-slate-800">GSSC Worlds 2026</span>
+            <span className="text-sm font-semibold text-slate-800">GSSF Worlds 2026</span>
           </div>
         </div>
       </div>

@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
-  Users,
   UserCheck,
   CalendarDays,
   BarChart3,
@@ -13,6 +12,8 @@ import {
   PieChart,
   CircleUser,
   Upload,
+  Handshake,
+  Ticket,
 } from 'lucide-react'
 import type { Role } from '@/lib/types'
 import { useAuth } from '@/lib/supabase/auth-context'
@@ -26,17 +27,18 @@ interface NavItem {
 
 const PROGRAM_ITEMS: NavItem[] = [
   { path: '/dashboard',    label: 'Dashboard',       icon: LayoutDashboard, roles: ['ADMIN', 'ORGANIZER', 'UNIVERSITY_POC'] },
-  { path: '/teams',        label: 'Teams',           icon: Users,           roles: ['ADMIN', 'ORGANIZER', 'UNIVERSITY_POC'] },
+  { path: '/universities', label: 'Universities',    icon: Building2,       roles: ['ADMIN', 'ORGANIZER', 'UNIVERSITY_POC'] },
   { path: '/participants', label: 'Participants',    icon: UserCheck,       roles: ['ADMIN', 'ORGANIZER'] },
-  { path: '/schedule',     label: 'Pitch Schedule',  icon: CalendarDays,    roles: ['ADMIN', 'ORGANIZER'] },
-  { path: '/scoring',      label: 'Scoring',         icon: BarChart3,       roles: ['ADMIN', 'JUDGE'] },
+  { path: '/sponsors',    label: 'Sponsors',         icon: Handshake,       roles: ['ADMIN', 'ORGANIZER'] },
+  { path: '/passes',      label: 'Passes',           icon: Ticket,          roles: ['ADMIN', 'ORGANIZER'] },
+  { path: '/schedule',     label: 'Pitch Schedule (Soon)',  icon: CalendarDays,    roles: ['ADMIN', 'ORGANIZER'] },
+  { path: '/scoring',      label: 'Scoring (Soon)',         icon: BarChart3,       roles: ['ADMIN', 'JUDGE'] },
 ]
 
 const ADMIN_ITEMS: NavItem[] = [
-  { path: '/universities', label: 'Universities', icon: Building2, roles: ['ADMIN', 'ORGANIZER', 'UNIVERSITY_POC'] },
-  { path: '/visa',         label: 'Visa Letters', icon: FileText,  roles: ['ADMIN', 'ORGANIZER'] },
-  { path: '/import',       label: 'Import Data',  icon: Upload,    roles: ['ADMIN'] },
-  { path: '/reports',      label: 'Reports',      icon: PieChart,  roles: ['ADMIN'] },
+  { path: '/visa',    label: 'Visa Letters (Soon)', icon: FileText, roles: ['ADMIN', 'ORGANIZER'] },
+  { path: '/import',  label: 'Import Data',  icon: Upload,   roles: ['ADMIN'] },
+  // { path: '/reports', label: 'Reports',      icon: PieChart, roles: ['ADMIN'] },
 ]
 
 const ACCOUNT_ITEMS: NavItem[] = [
@@ -93,7 +95,7 @@ export function Sidebar() {
       {/* Program header */}
       <div className="px-4 pb-3 pt-4">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Program</p>
-        <p className="mt-0.5 text-[13px] font-medium text-white">GSSC Worlds 2026</p>
+        <p className="mt-0.5 text-[13px] font-medium text-white">GSSF Worlds 2026</p>
       </div>
 
       {/* Nav */}
@@ -107,7 +109,7 @@ export function Sidebar() {
       <div className="border-t border-slate-700 px-4 py-3">
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-          <span className="text-[11px] text-slate-400">GSSC Worlds 2026</span>
+          <span className="text-[11px] text-slate-400">GSSF Worlds 2026</span>
           <span className="text-[11px] text-slate-500">· Active</span>
         </div>
         <p className="mt-0.5 text-[10px] text-slate-600">v1.0 prototype</p>

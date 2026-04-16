@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { PersonProfilePanel } from '@/components/shared/PersonProfilePanel'
+import { PersonProfilePanel, type MasterAttendee } from '@/components/shared/PersonProfilePanel'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import type { Role } from '@/lib/types'
@@ -23,6 +23,7 @@ interface ParticipantsClientProps {
     needs_visa: boolean | null
     status: string | null
     is_duplicate: boolean | null
+    category: string | null
     geographic_focus: string | null
     years_experience: string | null
     created_at: string | null
@@ -50,6 +51,7 @@ interface ParticipantsClientProps {
     university_pocs: { universities: { id: string; name: string } | null }[]
   }[]
   universities: { id: string; name: string; country: string }[]
+  masterAttendees: MasterAttendee[]
 }
 
 type Participant = ParticipantsClientProps['participants'][0]
@@ -75,25 +77,66 @@ function initials(name: string) {
 const AVATAR_BG: Record<string, string> = {
   ADMIN: 'bg-red-500', ORGANIZER: 'bg-orange-500', MENTOR: 'bg-blue-500',
   JUDGE: 'bg-purple-500', STUDENT: 'bg-green-500', UNIVERSITY_POC: 'bg-teal-500',
+  'KOR._STUDENT': 'bg-sky-500', 'INT._STUDENT': 'bg-emerald-500',
+  'ASSOCIATE-ORGANIZER': 'bg-amber-500', 'CO-FOUNDER': 'bg-violet-500',
 }
 function avatarClass(roles: string[]) {
   return AVATAR_BG[roles[0]] ?? 'bg-slate-400'
 }
 
 const FLAG_MAP: Record<string, string> = {
-  'United States': '🇺🇸', 'India': '🇮🇳', 'South Korea': '🇰🇷', 'Finland': '🇫🇮',
-  'United Kingdom': '🇬🇧', 'Singapore': '🇸🇬', 'Switzerland': '🇨🇭', 'Israel': '🇮🇱',
-  'Canada': '🇨🇦', 'Hong Kong': '🇭🇰', 'China': '🇨🇳', 'Germany': '🇩🇪',
-  'France': '🇫🇷', 'Japan': '🇯🇵', 'Nigeria': '🇳🇬', 'Ghana': '🇬🇭',
-  'Egypt': '🇪🇬', 'Brazil': '🇧🇷', 'Mexico': '🇲🇽',
+  // Country names
+  'united states': '🇺🇸', 'usa': '🇺🇸', 'us': '🇺🇸', 'u.s.a': '🇺🇸', 'u.s.': '🇺🇸',
+  'india': '🇮🇳', 'south korea': '🇰🇷', 'korea': '🇰🇷', 'republic of korea': '🇰🇷',
+  'finland': '🇫🇮', 'united kingdom': '🇬🇧', 'uk': '🇬🇧', 'england': '🇬🇧', 'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'singapore': '🇸🇬', 'switzerland': '🇨🇭', 'israel': '🇮🇱',
+  'canada': '🇨🇦', 'hong kong': '🇭🇰', 'china': '🇨🇳',
+  'japan': '🇯🇵', 'taiwan': '🇹🇼', 'germany': '🇩🇪', 'france': '🇫🇷',
+  'uae': '🇦🇪', 'united arab emirates': '🇦🇪',
+  'australia': '🇦🇺', 'new zealand': '🇳🇿',
+  'brazil': '🇧🇷', 'mexico': '🇲🇽', 'colombia': '🇨🇴', 'chile': '🇨🇱',
+  'argentina': '🇦🇷', 'peru': '🇵🇪',
+  'nigeria': '🇳🇬', 'ghana': '🇬🇭', 'kenya': '🇰🇪',
+  'south africa': '🇿🇦', 'egypt': '🇪🇬',
+  'indonesia': '🇮🇩', 'malaysia': '🇲🇾', 'thailand': '🇹🇭',
+  'philippines': '🇵🇭', 'vietnam': '🇻🇳', 'pakistan': '🇵🇰',
+  'bangladesh': '🇧🇩', 'sri lanka': '🇱🇰', 'nepal': '🇳🇵',
+  'saudi arabia': '🇸🇦', 'turkey': '🇹🇷', 'iran': '🇮🇷',
+  'jordan': '🇯🇴', 'lebanon': '🇱🇧',
+  'spain': '🇪🇸', 'italy': '🇮🇹', 'netherlands': '🇳🇱',
+  'sweden': '🇸🇪', 'norway': '🇳🇴', 'denmark': '🇩🇰',
+  'poland': '🇵🇱', 'austria': '🇦🇹', 'belgium': '🇧🇪',
+  'portugal': '🇵🇹', 'czech republic': '🇨🇿', 'russia': '🇷🇺',
+  'ukraine': '🇺🇦', 'greece': '🇬🇷', 'hungary': '🇭🇺', 'romania': '🇷🇴',
+  // Nationality adjectives
+  'american': '🇺🇸', 'indian': '🇮🇳', 'korean': '🇰🇷', 'south korean': '🇰🇷',
+  'finnish': '🇫🇮', 'british': '🇬🇧', 'english': '🇬🇧',
+  'singaporean': '🇸🇬', 'swiss': '🇨🇭', 'israeli': '🇮🇱',
+  'canadian': '🇨🇦', 'chinese': '🇨🇳', 'hongkonger': '🇭🇰', 'hong konger': '🇭🇰',
+  'japanese': '🇯🇵', 'taiwanese': '🇹🇼', 'german': '🇩🇪', 'french': '🇫🇷',
+  'emirati': '🇦🇪', 'australian': '🇦🇺', 'new zealander': '🇳🇿',
+  'brazilian': '🇧🇷', 'mexican': '🇲🇽', 'colombian': '🇨🇴', 'chilean': '🇨🇱',
+  'argentinian': '🇦🇷', 'argentine': '🇦🇷', 'peruvian': '🇵🇪',
+  'nigerian': '🇳🇬', 'ghanaian': '🇬🇭', 'kenyan': '🇰🇪',
+  'south african': '🇿🇦', 'egyptian': '🇪🇬',
+  'indonesian': '🇮🇩', 'malaysian': '🇲🇾', 'thai': '🇹🇭',
+  'filipino': '🇵🇭', 'philippine': '🇵🇭', 'vietnamese': '🇻🇳', 'pakistani': '🇵🇰',
+  'bangladeshi': '🇧🇩', 'sri lankan': '🇱🇰', 'nepali': '🇳🇵',
+  'saudi': '🇸🇦', 'saudi arabian': '🇸🇦', 'turkish': '🇹🇷', 'iranian': '🇮🇷',
+  'jordanian': '🇯🇴', 'lebanese': '🇱🇧',
+  'spanish': '🇪🇸', 'italian': '🇮🇹', 'dutch': '🇳🇱',
+  'swedish': '🇸🇪', 'norwegian': '🇳🇴', 'danish': '🇩🇰',
+  'polish': '🇵🇱', 'austrian': '🇦🇹', 'belgian': '🇧🇪',
+  'portuguese': '🇵🇹', 'czech': '🇨🇿', 'russian': '🇷🇺',
+  'ukrainian': '🇺🇦', 'greek': '🇬🇷', 'hungarian': '🇭🇺', 'romanian': '🇷🇴',
 }
 function flag(country: string) {
-  return FLAG_MAP[country] ?? '🌍'
+  return FLAG_MAP[country.trim().toLowerCase()] ?? '🌍'
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function ParticipantsClient({ participants, universities }: ParticipantsClientProps) {
+export function ParticipantsClient({ participants, universities, masterAttendees }: ParticipantsClientProps) {
   const [activeTab, setActiveTab]         = useState<FilterTab>('all')
   const [search, setSearch]               = useState('')
   const [nationalityFilter, setNationality] = useState('all')
@@ -111,9 +154,17 @@ export function ParticipantsClient({ participants, universities }: ParticipantsC
     const tabRole = TABS.find((t) => t.id === activeTab)?.role ?? null
 
     return participants.filter((p) => {
-      const roles = p.profile_roles.map((r) => r.role)
+      const pRoles = p.profile_roles.map((r) => r.role)
+      const roles = pRoles.length > 0
+        ? pRoles
+        : [p.category].filter((r): r is string => !!r?.trim()).map((r) => r.toUpperCase().replace(/\s+/g, '_'))
 
-      if (tabRole && !roles.includes(tabRole)) return false
+      if (tabRole) {
+        const matches = roles.includes(tabRole) ||
+          // KOR._STUDENT and INT._STUDENT count as STUDENT
+          (tabRole === 'STUDENT' && roles.some((r) => r.includes('STUDENT')))
+        if (!matches) return false
+      }
 
       if (search) {
         const s = search.toLowerCase()
@@ -167,7 +218,7 @@ export function ParticipantsClient({ participants, universities }: ParticipantsC
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Participants</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{participants.length} participants · GSSC Worlds 2026</p>
+        <p className="mt-0.5 text-sm text-slate-500">{participants.length} participants · GSSF Worlds 2026</p>
       </div>
 
       {/* Search + filters row */}
@@ -183,8 +234,8 @@ export function ParticipantsClient({ participants, universities }: ParticipantsC
           />
         </div>
 
-        {/* Nationality filter */}
-        <select
+        {/* Nationality filter — hidden until flag display is fixed */}
+        {/* <select
           value={nationalityFilter}
           onChange={(e) => { setNationality(e.target.value); setPage(0) }}
           className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -193,7 +244,7 @@ export function ParticipantsClient({ participants, universities }: ParticipantsC
           {nationalities.map((n) => (
             <option key={n} value={n}>{n}</option>
           ))}
-        </select>
+        </select> */}
 
         {/* University filter */}
         <select
@@ -247,13 +298,16 @@ export function ParticipantsClient({ participants, universities }: ParticipantsC
                 <th className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Name</th>
                 <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role(s)</th>
                 <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Org / University</th>
-                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Nationality</th>
+                {/* <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Nationality</th> */}
                 <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</th>
               </tr>
             </thead>
             <tbody>
               {pageData.map((p, i) => {
-                const roles = p.profile_roles.map((r) => r.role)
+                const profileRoles = p.profile_roles.map((r) => r.role)
+              const roles = profileRoles.length > 0
+                ? profileRoles
+                : [p.category].filter((r): r is string => !!r?.trim()).map((r) => r.toUpperCase().replace(/\s+/g, '_'))
                 const isReturning = p.cohort_history.length > 1
                 const orgDisplay = p.organization_name
                   ?? p.team_members[0]?.teams?.name
@@ -313,12 +367,12 @@ export function ParticipantsClient({ participants, universities }: ParticipantsC
                       </span>
                     </td>
 
-                    {/* Nationality */}
-                    <td className="px-4 py-2.5">
+                    {/* Nationality — hidden until flag display is fixed */}
+                    {/* <td className="px-4 py-2.5">
                       <span className="text-[12px] text-slate-600 whitespace-nowrap">
                         {flag(p.nationality ?? '')} {(p.nationality ?? '').replace(/-/g, '‑')}
                       </span>
-                    </td>
+                    </td> */}
 
                     {/* Status */}
                     <td className="px-4 py-2.5">
@@ -360,9 +414,10 @@ export function ParticipantsClient({ participants, universities }: ParticipantsC
         </div>
       </div>
 
-      {/* Person profile panel */}
+      {/* Person profile modal */}
       <PersonProfilePanel
         participant={selected}
+        masterAttendee={selected ? (masterAttendees.find((m) => m.email === selected.email) ?? null) : null}
         onClose={() => setSelected(null)}
       />
     </div>

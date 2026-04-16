@@ -57,20 +57,8 @@ function initials(name: string) {
 
 function LogoMark() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden>
-      <rect width="28" height="28" rx="7" fill="#3B82F6" />
-      <text
-        x="14"
-        y="20"
-        textAnchor="middle"
-        fill="white"
-        fontFamily="system-ui, sans-serif"
-        fontWeight="700"
-        fontSize="16"
-      >
-        G
-      </text>
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/gssf-logo.png" alt="GSSF" width={60} height={60} className="rounded" />
   )
 }
 
@@ -91,6 +79,7 @@ export function TopBar() {
 
   async function handleSignOut() {
     await supabase.auth.signOut()
+    router.refresh()
     router.push('/login')
   }
 
@@ -102,13 +91,13 @@ export function TopBar() {
       {/* Left — logo */}
       <div className="flex items-center gap-2.5">
         <LogoMark />
-        <span className="text-[15px] font-bold text-slate-900">GSSC VIP</span>
+        <span className="text-[15px] font-bold text-slate-900">GSSF VIP</span>
       </div>
 
       {/* Center — program label */}
       <div className="flex items-center">
         <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[13px] font-medium text-slate-600">
-          GSSC Worlds 2026
+          GSSF Worlds 2026
         </span>
       </div>
 

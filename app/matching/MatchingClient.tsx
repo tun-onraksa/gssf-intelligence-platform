@@ -337,7 +337,7 @@ export function MatchingClient({ teams, mentors, expertiseTags }: MatchingClient
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Mentor Matching</h1>
         <p className="mt-0.5 text-sm text-slate-500">
-          {teams.length} teams · {mentors.length} confirmed mentors · GSSC Worlds 2026
+          {teams.length} teams · {mentors.length} confirmed mentors · GSSF Worlds 2026
         </p>
       </div>
 

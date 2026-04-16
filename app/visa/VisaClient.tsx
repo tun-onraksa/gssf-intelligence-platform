@@ -138,7 +138,7 @@ function LetterPreviewModal({
             </p>
 
             <div className="my-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-center font-sans">
-              <p className="text-[14px] font-bold text-blue-900">GSSC Worlds 2026</p>
+              <p className="text-[14px] font-bold text-blue-900">GSSF Worlds 2026</p>
               <p className="text-[12px] text-blue-700">Global Student Startup Challenge</p>
               <p className="text-[12px] text-blue-700">Seoul, Republic of Korea</p>
               <p className="text-[12px] font-semibold text-blue-800 mt-1">May 17–21, 2026</p>
@@ -148,7 +148,7 @@ function LetterPreviewModal({
               <strong>{participant.full_name}</strong> is an official{' '}
               <strong>{rolePrimary(participant.profile_roles)}</strong>{' '}
               representing{' '}
-              <strong>{participant.organization_name ?? 'GSSC Worlds 2026'}</strong>{' '}
+              <strong>{participant.organization_name ?? 'GSSF Worlds 2026'}</strong>{' '}
               at this program. All accommodation and program costs will be covered by the organizing foundation.
             </p>
 
@@ -340,7 +340,7 @@ export function VisaClient({ programId, participants, visaLetters }: Props) {
         <div>
           <h1 className="text-[20px] font-bold text-slate-900">Visa Letters</h1>
           <p className="mt-0.5 text-[13px] text-slate-400">
-            Bulk visa invitation letter generation for GSSC Worlds 2026
+            Bulk visa invitation letter generation for GSSF Worlds 2026
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

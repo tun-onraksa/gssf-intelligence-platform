@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { ParticipantsClient } from './ParticipantsClient'
 
 export default async function ParticipantsPage() {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: participants } = await supabase
     .from('profiles')
@@ -19,6 +21,7 @@ export default async function ParticipantsPage() {
       needs_visa,
       status,
       is_duplicate,
+      category,
       geographic_focus,
       years_experience,
       created_at,
@@ -56,10 +59,15 @@ export default async function ParticipantsPage() {
     .select('id, name, country')
     .order('name')
 
+  const { data: masterAttendees } = await adminClient
+    .from('master_attendees')
+    .select('*')
+
   return (
     <ParticipantsClient
       participants={participants ?? []}
       universities={universities ?? []}
+      masterAttendees={masterAttendees ?? []}
     />
   )
 }

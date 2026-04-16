@@ -104,11 +104,23 @@ export async function fetchSheetPreview(sheetUrl: string) {
   const values: string[][] = data.values ?? []
 
   if (values.length < 2) {
-    throw new Error('Sheet is empty or has only a header row — nothing to import.')
+    throw new Error('Sheet appears to be empty or has only one row.')
   }
 
-  const headers = values[0].map((h) => h?.trim() ?? '')
-  const allRows = values.slice(1).filter((row) => row.some((cell) => cell?.trim()))
+  // Find the header row by scanning the first 5 rows and picking the one with
+  // the most matches against known column names across all sheet types.
+  const allKnownHeaders = new Set(
+    Object.values(SHEET_MAPPINGS).flatMap((defs) => defs.map((d) => d.sheetColumn.toLowerCase()))
+  )
+  let headerRowIndex = 1 // default: row 2
+  let bestMatchCount = 0
+  for (let i = 0; i < Math.min(5, values.length); i++) {
+    const count = values[i].filter((h) => allKnownHeaders.has(h?.trim().toLowerCase())).length
+    if (count > bestMatchCount) { bestMatchCount = count; headerRowIndex = i }
+  }
+
+  const headers = values[headerRowIndex].map((h) => h?.trim() ?? '')
+  const allRows = values.slice(headerRowIndex + 1).filter((row) => row.some((cell) => cell?.trim()))
 
   const detectedType = detectSheetType(headers)
 
@@ -169,7 +181,7 @@ export async function importSheetData(params: {
 
   for (let i = 0; i < allRows.length; i++) {
     const row = allRows[i]
-    const rowIndex = i + 2  // 1-indexed + header offset
+    const rowIndex = i + 3  // 1-indexed + skip row + header row
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj: Record<string, any> = {}
@@ -387,6 +399,196 @@ export async function importSheetData(params: {
     }
   }
 
+  // ── master ───────────────────────────────────────────────────────────────────
+
+  if (sheetType === 'master') {
+    for (const row of parsedRows) {
+      try {
+        // ── 1. Write personal info to profiles (email required) ──
+        if (row.email) {
+          try {
+            const profileFields = {
+              full_name:            row.full_name            ?? null,
+              last_name:            row.last_name            ?? null,
+              nickname:             row.nickname             ?? null,
+              prefix:               row.prefix               ?? null,
+              category:             row.category             ?? null,
+              job_title:            row.title                ?? null,
+              organization_name:    row.organization         ?? null,
+              phone:                row.phone                ?? null,
+              linkedin_url:         row.linkedin_url         ?? null,
+              dietary_restrictions: row.dietary_restrictions ?? null,
+              allergies:            row.allergies            ?? null,
+              bio:                  row.details              ?? null,
+              headshot_url:         row.headshot_url         ?? null,
+              sex:                  row.sex                  ?? null,
+              needs_visa:           row.needs_visa            ?? false,
+              status:               'invited' as const,
+            }
+
+            const { data: existingProfile } = await adminClient
+              .from('profiles')
+              .select('id')
+              .eq('email', row.email)
+              .maybeSingle()
+
+            if (existingProfile) {
+              await adminClient.from('profiles').update(profileFields).eq('id', existingProfile.id)
+            } else {
+              await adminClient.from('profiles').insert({ email: row.email, ...profileFields })
+            }
+
+            // Assign role from category if present (only when we have a valid programId)
+            if (row.category && programId) {
+              try {
+                const { data: profile } = await adminClient
+                  .from('profiles').select('id').eq('email', row.email).single()
+                if (profile) {
+                  await adminClient.from('profile_roles').upsert(
+                    { profile_id: profile.id, role: row.category.toUpperCase(), program_id: programId },
+                    { onConflict: 'profile_id,role,program_id' }
+                  )
+                }
+              } catch {
+                // role assignment is best-effort; don't fail the whole row
+              }
+            }
+          } catch {
+            // profiles write is best-effort; still write to master_attendees below
+          }
+        }
+
+        // ── 2. Write full record (incl. logistics) to master_attendees ──
+        const masterFields = {
+          last_name:            row.last_name            ?? null,
+          nickname:             row.nickname             ?? null,
+          prefix:               row.prefix               ?? null,
+          category:             row.category             ?? null,
+          title:                row.title                ?? null,
+          organization:         row.organization         ?? null,
+          mentor_name:          row.mentor_name          ?? null,
+          team_name:            row.team_name            ?? null,
+          phone:                row.phone                ?? null,
+          linkedin_url:         row.linkedin_url         ?? null,
+          dietary_restrictions: row.dietary_restrictions ?? null,
+          allergies:            row.allergies            ?? null,
+          details:              row.details              ?? null,
+          headshot_url:         row.headshot_url         ?? null,
+          sex:                  row.sex                  ?? null,
+          departure_city:       row.departure_city       ?? null,
+          departure_date_to:    row.departure_date_to    ?? null,
+          departure_date_from:  row.departure_date_from  ?? null,
+          destination_city:     row.destination_city     ?? null,
+          other_requests:       row.other_requests       ?? null,
+          ticket_status:        row.ticket_status        ?? null,
+          itinerary_url:        row.itinerary_url        ?? null,
+          itinerary_file2_url:  row.itinerary_file2_url  ?? null,
+        }
+
+        // Match by email if present, else by full_name
+        const { data: existingMaster } = row.email
+          ? await adminClient.from('master_attendees').select('id').eq('email', row.email).maybeSingle()
+          : await adminClient.from('master_attendees').select('id').eq('full_name', row.full_name).maybeSingle()
+
+        if (existingMaster) {
+          await adminClient.from('master_attendees').update(masterFields).eq('id', existingMaster.id)
+          skipped++
+        } else {
+          const { error: insertErr } = await adminClient
+            .from('master_attendees')
+            .insert({ full_name: row.full_name, email: row.email ?? null, ...masterFields })
+          if (insertErr) throw new Error(insertErr.message)
+          inserted++
+        }
+      } catch (err: unknown) {
+        errors.push({ row: row._rowIndex, message: err instanceof Error ? err.message : String(err) })
+      }
+    }
+  }
+
+  // ── passes ───────────────────────────────────────────────────────────────────
+
+  if (sheetType === 'passes') {
+    for (const row of parsedRows) {
+      try {
+        const passFields = {
+          category:             row.category             ?? null,
+          poc_name:             row.poc_name             ?? null,
+          title:                row.title                ?? null,
+          organization:         row.organization         ?? null,
+          status:               row.status               ?? null,
+          email:                row.email                ?? null,
+          phone:                row.phone                ?? null,
+          linkedin_url:         row.linkedin_url         ?? null,
+          dietary_restrictions: row.dietary_restrictions ?? null,
+          allergies:            row.allergies            ?? null,
+          details:              row.details              ?? null,
+          headshot_url:         row.headshot_url         ?? null,
+        }
+
+        const { data: existing } = await adminClient
+          .from('passes')
+          .select('id')
+          .ilike('full_name', row.full_name)
+          .eq('category', row.category ?? '')
+          .maybeSingle()
+
+        if (existing) {
+          await adminClient.from('passes').update(passFields).eq('id', existing.id)
+          skipped++
+        } else {
+          const { error: insertErr } = await adminClient
+            .from('passes')
+            .insert({ full_name: row.full_name, ...passFields })
+          if (insertErr) throw new Error(insertErr.message)
+          inserted++
+        }
+      } catch (err: unknown) {
+        errors.push({ row: row._rowIndex, message: err instanceof Error ? err.message : String(err) })
+      }
+    }
+  }
+
+  // ── sponsors ─────────────────────────────────────────────────────────────────
+
+  if (sheetType === 'sponsors') {
+    for (const row of parsedRows) {
+      try {
+        const sponsorFields = {
+          sponsorship: row.sponsorship ?? null,
+          status:      row.status      ?? null,
+          reach:       row.reach       ?? null,
+          notes:       row.notes       ?? null,
+          logo_url:    row.logo_url    ?? null,
+          poc_name:    row.poc_name    ?? null,
+          poc_title:   row.poc_title   ?? null,
+          poc_email:   row.poc_email   ?? null,
+          poc_notes:   row.poc_notes   ?? null,
+          poc_phone:   row.poc_phone   ?? null,
+        }
+
+        const { data: existing } = await adminClient
+          .from('sponsors')
+          .select('id')
+          .ilike('name', row.name)
+          .maybeSingle()
+
+        if (existing) {
+          await adminClient.from('sponsors').update(sponsorFields).eq('id', existing.id)
+          skipped++
+        } else {
+          const { error: insertErr } = await adminClient
+            .from('sponsors')
+            .insert({ name: row.name, ...sponsorFields })
+          if (insertErr) throw new Error(insertErr.message)
+          inserted++
+        }
+      } catch (err: unknown) {
+        errors.push({ row: row._rowIndex, message: err instanceof Error ? err.message : String(err) })
+      }
+    }
+  }
+
   // ── universities ─────────────────────────────────────────────────────────
 
   if (sheetType === 'universities') {
@@ -398,18 +600,26 @@ export async function importSheetData(params: {
           .ilike('name', row.name)
           .maybeSingle()
 
+        const uniFields = {
+          country:        row.country        ?? 'Unknown',
+          status:         row.status         ?? null,
+          team_count:     row.team_count     ?? null,
+          poc_name:       row.poc_name       ?? null,
+          poc_title:      row.poc_title      ?? null,
+          poc_email:      row.poc_email      ?? null,
+          poc_phone:      row.poc_phone      ?? null,
+          notes:          row.notes          ?? null,
+          cohort_history: row.cohort_history ?? [],
+        }
+
         if (existing) {
-          await adminClient.from('universities').update({
-            country:        row.country        ?? existing,
-            cohort_history: row.cohort_history ?? [],
-          }).eq('id', existing.id)
+          await adminClient.from('universities').update(uniFields).eq('id', existing.id)
           skipped++
         } else {
           const { error: insertErr } = await adminClient.from('universities').insert({
-            name:           row.name,
-            country:        row.country ?? 'Unknown',
-            active_status:  true,
-            cohort_history: row.cohort_history ?? [],
+            name:          row.name,
+            active_status: true,
+            ...uniFields,
           })
           if (insertErr) throw new Error(insertErr.message)
           inserted++
@@ -423,6 +633,9 @@ export async function importSheetData(params: {
   revalidatePath('/participants')
   revalidatePath('/teams')
   revalidatePath('/universities')
+  revalidatePath('/sponsors')
+  revalidatePath('/passes')
+  revalidatePath('/master')
 
   return { inserted, skipped, errors, total: allRows.length }
 }

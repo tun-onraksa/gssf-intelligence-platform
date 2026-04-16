@@ -13,7 +13,7 @@ export default async function ImportPage() {
   return (
     <ImportClient
       programId={program?.id ?? ''}
-      programName={program?.name ?? 'GSSC Worlds 2026'}
+      programName={program?.name ?? 'GSSF Worlds 2026'}
     />
   )
 }

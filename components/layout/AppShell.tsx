@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { TopBar } from './TopBar'
 import { Sidebar } from './Sidebar'
+import { ChatBubble } from '@/components/shared/ChatBubble'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -27,6 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
+      <ChatBubble />
     </>
   )
 }

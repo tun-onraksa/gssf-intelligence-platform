@@ -24,6 +24,7 @@ export function InviteModal({ open, onClose, defaultRole }: InviteModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [loginUrl, setLoginUrl] = useState('')
 
   // Fetch teams once when modal opens
   useEffect(() => {
@@ -44,12 +45,13 @@ export function InviteModal({ open, onClose, defaultRole }: InviteModalProps) {
     setLoading(true)
     setError(null)
     try {
-      await createInvite({
+      const res = await createInvite({
         email,
         role,
         teamName: teamName || undefined,
         track: track || undefined,
       })
+      setLoginUrl((res as { loginUrl?: string }).loginUrl ?? '')
       setSuccess(true)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -65,6 +67,7 @@ export function InviteModal({ open, onClose, defaultRole }: InviteModalProps) {
     setTrack('')
     setError(null)
     setSuccess(false)
+    setLoginUrl('')
     onClose()
   }
 
@@ -98,10 +101,11 @@ export function InviteModal({ open, onClose, defaultRole }: InviteModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="ORGANIZER">Organizer</SelectItem>
                   <SelectItem value="STUDENT">Student</SelectItem>
                   <SelectItem value="MENTOR">Mentor</SelectItem>
                   <SelectItem value="JUDGE">Judge</SelectItem>
-                  <SelectItem value="ORGANIZER">Organizer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -172,10 +176,19 @@ export function InviteModal({ open, onClose, defaultRole }: InviteModalProps) {
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
               <Send className="w-5 h-5 text-green-600" />
             </div>
-            <p className="font-medium text-slate-900">Invite sent!</p>
+            <p className="font-medium text-slate-900">Invite created!</p>
             <p className="text-sm text-slate-500 mt-1">
-              A magic link has been sent to <span className="font-medium">{email}</span>.
-              It expires in 7 days.
+              <span className="font-medium">{email}</span> has been pre-authorized as{' '}
+              <span className="font-medium">{role}</span>.
+            </p>
+            <p className="text-sm text-slate-500 mt-2">
+              Share this link so they can sign in with their Google account:
+            </p>
+            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-600 break-all select-all">
+              {loginUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/login`}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2">
+              Their role will be applied automatically when they sign in.
             </p>
             <Button onClick={handleClose} className="mt-4 w-full" variant="outline">
               Done

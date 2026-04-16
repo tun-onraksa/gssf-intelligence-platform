@@ -11,8 +11,8 @@ const geistSans = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'GSSC VIP',
-  description: 'GSSC Program Intelligence Platform',
+  title: 'GSSF VIP',
+  description: 'GSSF Program Intelligence Platform',
 }
 
 export default function RootLayout({

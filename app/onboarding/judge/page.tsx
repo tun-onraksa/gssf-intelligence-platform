@@ -142,7 +142,7 @@ function SuccessCard({
           You&apos;re confirmed, {firstName}!
         </h1>
         <p className="mt-2 text-sm text-slate-600 leading-relaxed text-center">
-          You&apos;re confirmed as a Judge at GSSC Worlds 2026. Your scoring queue
+          You&apos;re confirmed as a Judge at GSSF Worlds 2026. Your scoring queue
           will be activated before Pitch Day (May 19).
         </p>
         <div className="mt-5 space-y-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
@@ -187,7 +187,7 @@ function Step1({ f, set, e, track }: { f: JF; set: (k: keyof JF, v: string | boo
         <span className="mt-0.5 text-lg">⚖️</span>
         <div>
           <p className="text-sm text-purple-900">You&apos;ve been invited as a <span className="font-bold">Judge{track ? ` — Track ${track}` : ''}</span></p>
-          <p className="mt-0.5 text-[12px] text-purple-500">GSSC Worlds 2026 · Seoul, May 17–21</p>
+          <p className="mt-0.5 text-[12px] text-purple-500">GSSF Worlds 2026 · Seoul, May 17–21</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -463,7 +463,7 @@ function Step4({
       >
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-800">GSSC Worlds 2026 — Judging Rubric</h3>
+            <h3 className="font-bold text-slate-800">GSSF Worlds 2026 — Judging Rubric</h3>
             {track && <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Track {track}</span>}
           </div>
 
@@ -535,7 +535,7 @@ function Step4({
           className="mt-0.5 h-4 w-4 accent-blue-600 shrink-0"
         />
         <p className="text-[12px] text-slate-700 leading-relaxed">
-          I have read and understood the GSSC Worlds 2026 scoring rubric, including dimension weights,
+          I have read and understood the GSSF Worlds 2026 scoring rubric, including dimension weights,
           the tie-break protocol, and the score confidentiality policy.
         </p>
       </label>

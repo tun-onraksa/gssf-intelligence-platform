@@ -591,7 +591,7 @@ export function ScheduleClient({
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
         <div>
           <h1 className="text-[18px] font-semibold text-slate-900">Pitch Schedule</h1>
-          <p className="mt-0.5 text-[13px] text-slate-400">GSSC Worlds 2026 · May 19–20</p>
+          <p className="mt-0.5 text-[13px] text-slate-400">GSSF Worlds 2026 · May 19–20</p>
         </div>
         <div className="flex items-center gap-3">
           {hasConflicts && !published && (

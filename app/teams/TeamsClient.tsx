@@ -286,7 +286,7 @@ function TeamDrawer({
           {/* Qualifying path chain */}
           <DrawerSection title="Qualifying Path">
             {(team.qualifying_path ?? 'direct') === 'direct' ? (
-              <p className="text-[13px] text-slate-700">Qualified directly to GSSC Worlds 2026</p>
+              <p className="text-[13px] text-slate-700">Qualified directly to GSSF Worlds 2026</p>
             ) : (
               <div className="flex items-center gap-2 text-[13px] text-slate-700">
                 <span className="rounded bg-slate-100 px-2 py-0.5 font-medium">
@@ -294,7 +294,7 @@ function TeamDrawer({
                 </span>
                 <ArrowRight size={14} className="text-slate-400" />
                 <span className="rounded bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
-                  GSSC Worlds 2026
+                  GSSF Worlds 2026
                 </span>
               </div>
             )}
@@ -483,7 +483,7 @@ export function TeamsClient({ teams, pitchSlots }: TeamsClientProps) {
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Teams</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{teams.length} teams · GSSC Worlds 2026</p>
+        <p className="mt-0.5 text-sm text-slate-500">{teams.length} teams · GSSF Worlds 2026</p>
       </div>
 
       {/* Search + filters */}

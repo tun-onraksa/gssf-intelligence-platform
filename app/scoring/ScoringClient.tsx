@@ -429,7 +429,7 @@ function JudgeScoringView({
           <h1 className="text-[20px] font-bold text-slate-900">My Scoring Queue</h1>
           <p className="mt-0.5 text-[13px] text-slate-400">Score your assigned teams before Pitch Day closes.</p>
         </div>
-        <p className="text-[13px] font-semibold text-slate-600">Track {myTrack} · GSSC Worlds 2026</p>
+        <p className="text-[13px] font-semibold text-slate-600">Track {myTrack} · GSSF Worlds 2026</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
@@ -898,7 +898,7 @@ function AdminScoringView({
           <h1 className="text-[20px] font-bold text-slate-900">Scoring</h1>
           <p className="mt-0.5 text-[13px] text-slate-400">Manage judge scoring across all tracks.</p>
         </div>
-        <p className="text-[13px] font-semibold text-slate-500">GSSC Worlds 2026</p>
+        <p className="text-[13px] font-semibold text-slate-500">GSSF Worlds 2026</p>
       </div>
 
       <Tabs value={activeTrack} onValueChange={(v) => v && setActiveTrack(v)}>
